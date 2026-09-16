@@ -1,9 +1,8 @@
+import { RouterProvider } from "react-router-dom";
+import { routes } from "./presentation/routes/routes";
+
 const App = () => {
-  return (
-    <div>
-      <button className="btn btn-primary">click me</button>
-    </div>
-  );
+  return <RouterProvider router={routes} />;
 };
 
 export default App;
