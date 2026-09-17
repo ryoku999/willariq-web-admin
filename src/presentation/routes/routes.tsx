@@ -27,7 +27,7 @@ export const routes = createBrowserRouter([
     ),
     children: [
       {
-        path: "/admin",
+        path: "/",
         element: (
           <Suspense fallback={<LazyLoading />}>
             <DashboardPage />,

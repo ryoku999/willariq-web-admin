@@ -3,7 +3,7 @@ import type { UserRole } from "../interfaces/auth-storage.interface";
 export const roleBasedRedirection = (role: UserRole) => {
   switch (role) {
     case "ADMIN":
-      return "/admin";
+      return "/";
     case "OPERATOR":
       return "/operator";
     case "SUPERVISOR":
