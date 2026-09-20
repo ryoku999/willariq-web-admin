@@ -1,6 +1,10 @@
 import http from "@/config/http/axios";
 import type { AuthRepository } from "@/core/contracts/auth.repository";
-import type { LoginReq, LoginRes } from "@/core/entities/auth.entity";
+import type {
+  LoginReq,
+  LoginRes,
+  LogoutRes,
+} from "@/core/entities/auth.entity";
 import type { AxiosInstance } from "axios";
 
 class AuthService implements AuthRepository {
@@ -12,6 +16,11 @@ class AuthService implements AuthRepository {
       `${this.prefix}/login`,
       dto,
     );
+    return data;
+  }
+
+  async logout(): Promise<LogoutRes> {
+    const { data } = await this.http.post<LogoutRes>(`${this.prefix}/logout`);
     return data;
   }
 }

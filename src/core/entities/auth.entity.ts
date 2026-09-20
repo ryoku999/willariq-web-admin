@@ -25,3 +25,13 @@ export interface LoginResData {
   role: UserRole;
   status: string;
 }
+
+// logout
+
+export interface LogoutRes {
+  success: boolean;
+  path: string;
+  data: {
+    message: string;
+  };
+}

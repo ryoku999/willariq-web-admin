@@ -17,3 +17,7 @@ export const SupervisorDashboardPage = lazy(
   () =>
     import("@/presentation/features/supervisor/dashboard/page/SupervisorDashboardPage"),
 );
+
+export const ProfilePage = lazy(
+  () => import("@/presentation/features/users/page/ProfilePage"),
+);

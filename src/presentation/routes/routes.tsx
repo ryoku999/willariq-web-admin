@@ -4,6 +4,7 @@ import {
   DashboardPage,
   LoginPage,
   OperatorDashboardPage,
+  ProfilePage,
   SupervisorDashboardPage,
 } from "./lazy-routes";
 import AuthLayout from "../layouts/AuthLayout";
@@ -15,9 +16,11 @@ import NotFoundPage from "../components/NotFoundPage";
 import OperatorLayout from "../layouts/OperatorLayout";
 import SupervisorLayout from "../layouts/SupervisorLayout";
 import RoleGuard from "../guards/RoleGuard";
+import ErrorState from "../components/ErrorState";
 
 export const routes = createBrowserRouter([
   {
+    errorElement: <ErrorState />,
     element: (
       <AuthGuard>
         <RoleGuard allowedRoles={["ADMIN"]}>
@@ -31,6 +34,15 @@ export const routes = createBrowserRouter([
         element: (
           <Suspense fallback={<LazyLoading />}>
             <DashboardPage />,
+          </Suspense>
+        ),
+      },
+
+      {
+        path: "/profile",
+        element: (
+          <Suspense fallback={<LazyLoading />}>
+            <ProfilePage />,
           </Suspense>
         ),
       },
@@ -53,6 +65,15 @@ export const routes = createBrowserRouter([
           </Suspense>
         ),
       },
+
+      {
+        path: "/operator/profile",
+        element: (
+          <Suspense fallback={<LazyLoading />}>
+            <DashboardPage />,
+          </Suspense>
+        ),
+      },
     ],
   },
   {
@@ -69,6 +90,15 @@ export const routes = createBrowserRouter([
         element: (
           <Suspense fallback={<LazyLoading />}>
             <SupervisorDashboardPage />
+          </Suspense>
+        ),
+      },
+
+      {
+        path: "/supervisor/profile",
+        element: (
+          <Suspense fallback={<LazyLoading />}>
+            <DashboardPage />,
           </Suspense>
         ),
       },

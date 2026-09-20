@@ -18,3 +18,15 @@ export const useLogin = () => {
     },
   });
 };
+
+export const useLogout = () => {
+  const { deleteAuth } = useAuthStore();
+
+  return useMutation({
+    mutationKey: ["web", "logout"],
+    mutationFn: () => authService.logout(),
+    onSuccess: () => {
+      deleteAuth();
+    },
+  });
+};

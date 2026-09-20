@@ -1,10 +1,6 @@
-import { Outlet } from "react-router-dom";
+import DashboardLayout from "./DashboardLayout";
 
 const AdminLayout = () => {
-  return (
-    <>
-      <Outlet />
-    </>
-  );
+  return <DashboardLayout role="ADMIN" />;
 };
 export default AdminLayout;
