@@ -5,6 +5,7 @@ import type {
   LoginRes,
   LogoutRes,
 } from "@/core/entities/auth.entity";
+import type { ApiEnvelope } from "@/shared/interfaces/api-response.interface";
 import type { AxiosInstance } from "axios";
 
 class AuthService implements AuthRepository {
@@ -12,16 +13,18 @@ class AuthService implements AuthRepository {
   private readonly prefix = "/auth/web";
 
   async login(dto: LoginReq): Promise<LoginRes> {
-    const { data } = await this.http.post<LoginRes>(
+    const { data } = await this.http.post<ApiEnvelope<LoginRes>>(
       `${this.prefix}/login`,
       dto,
     );
-    return data;
+    return data.data;
   }
 
   async logout(): Promise<LogoutRes> {
-    const { data } = await this.http.post<LogoutRes>(`${this.prefix}/logout`);
-    return data;
+    const { data } = await this.http.post<ApiEnvelope<LogoutRes>>(
+      `${this.prefix}/logout`,
+    );
+    return data.data;
   }
 }
 

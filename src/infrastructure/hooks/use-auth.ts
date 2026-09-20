@@ -2,12 +2,13 @@ import { useMutation } from "@tanstack/react-query";
 import { authService } from "../services/auth.service";
 import type { LoginReq } from "@/core/entities/auth.entity";
 import { useAuthStore } from "../storage/auth-storage";
+import { endSession } from "@/config/http/auth-session";
 
 export const useLogin = () => {
-  const { setUser } = useAuthStore();
+  const setUser = useAuthStore((state) => state.setUser);
 
   return useMutation({
-    mutationKey: ["web", "logoin"],
+    mutationKey: ["web", "login"],
     mutationFn: (dto: LoginReq) => authService.login(dto),
     onSuccess: (data) => {
       setUser({
@@ -20,13 +21,9 @@ export const useLogin = () => {
 };
 
 export const useLogout = () => {
-  const { deleteAuth } = useAuthStore();
-
   return useMutation({
     mutationKey: ["web", "logout"],
     mutationFn: () => authService.logout(),
-    onSuccess: () => {
-      deleteAuth();
-    },
+    onSettled: endSession,
   });
 };

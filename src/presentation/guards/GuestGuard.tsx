@@ -3,11 +3,11 @@ import type { PropsWithChildren } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
 const GuestGuard = ({ children }: PropsWithChildren) => {
-  const { isAuthenticated, user } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
   const location = useLocation();
   const from = location.state?.from?.pathname || "/";
 
-  if (isAuthenticated || user) {
+  if (user) {
     return <Navigate to={from} replace />;
   }
 

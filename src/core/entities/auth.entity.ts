@@ -9,12 +9,6 @@ export interface LoginReq {
 // login response
 
 export interface LoginRes {
-  success: boolean;
-  path: string;
-  data: LoginResData;
-}
-
-export interface LoginResData {
   dni: string;
   email: string | null;
   emailVerifiedAt: string | null;
@@ -29,9 +23,5 @@ export interface LoginResData {
 // logout
 
 export interface LogoutRes {
-  success: boolean;
-  path: string;
-  data: {
-    message: string;
-  };
+  message: string;
 }

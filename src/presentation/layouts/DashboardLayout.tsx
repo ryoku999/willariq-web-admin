@@ -7,9 +7,10 @@ import {
   X,
 } from "lucide-react";
 import { useState, type PropsWithChildren } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/infrastructure/storage/auth-storage";
 import type { UserRole } from "@/shared/interfaces/auth-storage.interface";
+import { useLogout } from "@/infrastructure/hooks/use-auth";
 
 type DashboardLayoutProps = PropsWithChildren<{ role: UserRole }>;
 
@@ -28,16 +29,11 @@ const getItems = (role: UserRole) => {
 };
 
 const DashboardLayout = ({ role }: DashboardLayoutProps) => {
-  const { user, deleteAuth } = useAuthStore();
-  const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
+  const logout = useLogout();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const items = getItems(role);
-
-  const logout = () => {
-    deleteAuth();
-    navigate("/login", { replace: true });
-  };
 
   return (
     <div className="min-h-screen bg-base-200 text-base-content">
@@ -100,7 +96,8 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
             </div>
           </div>
           <button
-            onClick={logout}
+            onClick={() => logout.mutate()}
+            disabled={logout.isPending}
             className="btn btn-ghost btn-sm w-full justify-start gap-3 text-error hover:bg-error/10"
           >
             <LogOut size={17} />
@@ -129,7 +126,8 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
             </div>
           </div>
           <button
-            onClick={logout}
+            onClick={() => logout.mutate()}
+            disabled={logout.isPending}
             className="btn btn-outline btn-sm gap-2 border-base-300 text-base-content/70 hover:border-error hover:bg-error hover:text-error-content"
           >
             <LogOut size={16} />
