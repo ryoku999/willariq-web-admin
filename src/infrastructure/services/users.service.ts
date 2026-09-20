@@ -12,6 +12,7 @@ class UsersService implements UsersRepository {
     const { data } = await this.http.get<ApiEnvelope<UserProfile>>(
       `${this.prefix}/me`,
     );
+
     return data.data;
   }
 }

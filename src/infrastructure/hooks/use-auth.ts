@@ -12,9 +12,9 @@ export const useLogin = () => {
     mutationFn: (dto: LoginReq) => authService.login(dto),
     onSuccess: (data) => {
       setUser({
-        lastName: data.data.lastName,
-        name: data.data.firstName,
-        role: data.data.role,
+        lastName: data.lastName,
+        name: data.firstName,
+        role: data.role,
       });
     },
   });

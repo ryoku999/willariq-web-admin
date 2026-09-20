@@ -41,7 +41,8 @@ function refreshAccessToken(): Promise<void> {
 }
 
 interface AuthErrorResponse {
-  code: "ACCESS_TOKEN_EXPIRED" | "ACCESS_TOKEN_INVALID";
+  code:
+    "ACCESS_TOKEN_EXPIRED" | "ACCESS_TOKEN_MISSING" | "ACCESS_TOKEN_INVALID";
 }
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
@@ -52,7 +53,11 @@ const isAuthErrorResponse = (data: unknown): data is AuthErrorResponse => {
   if (!data || typeof data !== "object") return false;
 
   const { code } = data as Record<string, unknown>;
-  return code === "ACCESS_TOKEN_EXPIRED" || code === "ACCESS_TOKEN_INVALID";
+  return (
+    code === "ACCESS_TOKEN_EXPIRED" ||
+    code === "ACCESS_TOKEN_MISSING" ||
+    code === "ACCESS_TOKEN_INVALID"
+  );
 };
 
 const isPublicAuthRoute = (url: string | undefined) => {

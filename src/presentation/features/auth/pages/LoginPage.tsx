@@ -33,7 +33,7 @@ const LoginPage = () => {
   const onSubmit = (values: LoginT) => {
     login.mutate(values, {
       onSuccess: (data) => {
-        navigate(roleBasedRedirection(data.data.role));
+        navigate(roleBasedRedirection(data.role));
       },
       onError: (err) => {
         if (err instanceof ZodError) {
