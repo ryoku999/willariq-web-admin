@@ -21,3 +21,11 @@ export const SupervisorDashboardPage = lazy(
 export const ProfilePage = lazy(
   () => import("@/presentation/features/users/page/ProfilePage"),
 );
+
+export const UsersListPage = lazy(
+  () => import("@/presentation/features/admin/users/pages/UsersListPage"),
+);
+
+export const UsersDeatilsPage = lazy(
+  () => import("@/presentation/features/admin/users/pages/UsersDeatilsPage"),
+);

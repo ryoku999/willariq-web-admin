@@ -6,6 +6,8 @@ import {
   OperatorDashboardPage,
   ProfilePage,
   SupervisorDashboardPage,
+  UsersDeatilsPage,
+  UsersListPage,
 } from "./lazy-routes";
 import AuthLayout from "../layouts/AuthLayout";
 import { Suspense } from "react";
@@ -46,6 +48,22 @@ export const routes = createBrowserRouter([
           </Suspense>
         ),
       },
+      {
+        path: "/users",
+        element: (
+          <Suspense fallback={<LazyLoading />}>
+            <UsersListPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "/users/:userId/details",
+        element: (
+          <Suspense fallback={<LazyLoading />}>
+            <UsersDeatilsPage />
+          </Suspense>
+        ),
+      },
     ],
   },
   {
@@ -70,7 +88,7 @@ export const routes = createBrowserRouter([
         path: "/operator/profile",
         element: (
           <Suspense fallback={<LazyLoading />}>
-            <DashboardPage />,
+            <ProfilePage />
           </Suspense>
         ),
       },
@@ -98,7 +116,7 @@ export const routes = createBrowserRouter([
         path: "/supervisor/profile",
         element: (
           <Suspense fallback={<LazyLoading />}>
-            <DashboardPage />,
+            <ProfilePage />
           </Suspense>
         ),
       },

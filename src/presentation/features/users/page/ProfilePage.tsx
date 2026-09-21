@@ -1,6 +1,7 @@
 import { useUserProfile } from "@/infrastructure/hooks/use-users";
 import ErrorState from "@/presentation/components/ErrorState";
 import LoadingState from "@/presentation/components/LoadingState";
+import UpdateProfileForm from "../components/UpdateProfileForm";
 import {
   AtSign,
   CalendarDays,
@@ -71,7 +72,7 @@ const ProfilePage = () => {
   const isActive = user.status.toLowerCase() === "active";
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6 ">
       <div>
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
           Cuenta personal
@@ -151,6 +152,8 @@ const ProfilePage = () => {
           />
         </div>
       </section>
+
+      <UpdateProfileForm user={user} />
     </div>
   );
 };
