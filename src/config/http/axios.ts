@@ -12,6 +12,9 @@ const PUBLIC_AUTH_ROUTES = [
   "/auth/register",
   "/auth/web/refresh",
   "/auth/web/logout",
+  "/auth/password/forgot",
+  "/auth/password/reset",
+  "/users/email-verifications/confirm",
 ];
 
 const http: AxiosInstance = create({

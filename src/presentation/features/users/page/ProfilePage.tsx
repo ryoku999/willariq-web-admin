@@ -1,3 +1,4 @@
+import { AccountSettings } from "../../engagement/AccountPages";
 import { useUserProfile } from "@/infrastructure/hooks/use-users";
 import ErrorState from "@/presentation/components/ErrorState";
 import LoadingState from "@/presentation/components/LoadingState";
@@ -154,6 +155,7 @@ const ProfilePage = () => {
       </section>
 
       <UpdateProfileForm user={user} />
+      <AccountSettings email={user.email} verified={!!user.emailVerifiedAt} />
     </div>
   );
 };

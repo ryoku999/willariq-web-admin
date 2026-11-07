@@ -1,3 +1,4 @@
+import { useUnreadCount } from "@/infrastructure/hooks/use-engagement";
 import { LogOut, Menu, ShieldCheck, X, ChevronDown } from "lucide-react";
 import { useState, type PropsWithChildren } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
@@ -17,6 +18,7 @@ const roleLabels: Record<UserRole, string> = {
 const DashboardLayout = ({ role }: DashboardLayoutProps) => {
   const user = useAuthStore((state) => state.user);
   const logout = useLogout();
+  const unread = useUnreadCount();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const items = allNavItems
@@ -63,7 +65,7 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
         <p className="mb-3 px-3 text-xs font-bold uppercase tracking-[0.2em] text-base-content/40">
           Menú principal
         </p>
-        <nav className="space-y-1">
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto">
           {items.map(({ label, to, icon: Icon, exact, children }) => {
             const hasChildren = Boolean(children?.length);
             const isParentActive =
@@ -90,6 +92,14 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
                   >
                     <Icon size={19} />
                     {label}
+                    {to.endsWith("/notifications") && !!unread.data?.count && (
+                      <span
+                        className="badge badge-primary badge-sm"
+                        aria-label={`${unread.data.count} sin leer`}
+                      >
+                        {unread.data.count}
+                      </span>
+                    )}
                   </NavLink>
                   {hasChildren && (
                     <button

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useLogin } from "@/infrastructure/hooks/use-auth";
 import type { LoginT } from "../schemas/login.schema";
 import { ZodError } from "zod";
@@ -187,6 +188,12 @@ const LoginPage = () => {
                 )}
                 {login.isPending ? "Ingresando..." : "Ingresar al panel"}
               </button>
+              <Link
+                className="link link-primary text-sm"
+                to="/recuperar-contrasena"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
             </form>
 
             <p className="mt-8 text-center text-xs text-base-content/45">

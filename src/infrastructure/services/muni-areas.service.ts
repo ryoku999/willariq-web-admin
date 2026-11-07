@@ -59,7 +59,7 @@ class MuniAreasService implements MuniAreasRepository {
     dto: MuniAreaUpdateStatusReq,
   ): Promise<MuniAreaUpdateStatusRes> {
     const { data } = await this.http.patch(
-      `${this.prefix}/${dto.muniAreasId}`,
+      `${this.prefix}/${dto.muniAreasId}/status`,
       dto.payload,
     );
 
