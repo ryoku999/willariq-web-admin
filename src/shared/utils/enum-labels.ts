@@ -174,6 +174,8 @@ const labels: Readonly<Record<string, string>> = {
   Incident: "Incidencia",
   User: "Usuario",
   MunicipalArea: "Área municipal",
+  EmbeddingProfile: "Perfil de embeddings",
+  EMBEDDING_PROFILE_ACTIVATED: "Perfil de embeddings activado",
   MunicipalAreaMember: "Membresía de área",
   IncidentEvidence: "Evidencia de incidencia",
   PromptVersion: "Versión de prompt",

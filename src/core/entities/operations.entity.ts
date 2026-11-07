@@ -79,6 +79,9 @@ export interface Incident {
 }
 export interface IncidentDetail extends Incident {
   originalMessage: string;
+  classificationSource: "AI" | "HUMAN" | null;
+  reviewedAt: string | null;
+  addressReference: string | null;
   improvedDescription: string | null;
   recommendedAction: string | null;
   sentiment: string | null;

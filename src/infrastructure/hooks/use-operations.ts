@@ -99,8 +99,16 @@ export function useOperationMutation() {
       ]),
   });
 }
-export const useEvidenceDownload = () =>
-  useMutation({
-    mutationFn: ({ id, evidenceId }: { id: string; evidenceId: string }) =>
-      api.evidenceContent(id, evidenceId),
+export const useEvidenceContent = (
+  id: string,
+  evidenceId: string,
+  enabled: boolean,
+) =>
+  useQuery({
+    queryKey: ["evidence-content", id, evidenceId],
+    queryFn: () => api.evidenceContent(id, evidenceId),
+    enabled,
+    staleTime: Infinity,
+    gcTime: 0,
+    retry: false,
   });

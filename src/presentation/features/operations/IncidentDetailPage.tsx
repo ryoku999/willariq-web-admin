@@ -1,3 +1,11 @@
+import {
+  ArrowLeft,
+  ClipboardList,
+  MapPin,
+  MessageSquare,
+  Sparkles,
+  UserRound,
+} from "lucide-react";
 import { personName } from "@/shared/utils/panel-format";
 import { enumLabel } from "@/shared/utils/enum-labels";
 import { roleBase } from "@/shared/utils/operations-path";
@@ -15,7 +23,6 @@ import {
 import {
   useAssignmentsForIncident,
   useIncidentJobs,
-  useEvidenceDownload,
   useIncident,
   useIncidentRecords,
   useOperationMutation,
@@ -35,11 +42,10 @@ import {
   PanelTable,
   QueryView,
 } from "@/presentation/components/PanelControls";
-import {
-  downloadBlob,
-  errorMessage,
-  formatDate,
-} from "@/shared/utils/panel-format";
+import { errorMessage, formatDate } from "@/shared/utils/panel-format";
+
+import { IncidentStatusBadge, IncidentUrgencyBadge } from "./IncidentBadges";
+import { EvidenceGallery } from "./EvidenceGallery";
 
 const IncidentMap = lazy(() => import("./IncidentMap"));
 const labels = {
@@ -378,7 +384,6 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
     activeStatuses.includes(row.status),
   );
   const operation = useOperationMutation();
-  const download = useEvidenceDownload();
   const global = user?.role === "ADMIN" || user?.role === "SUPERVISOR";
   const manager =
     !!active &&
@@ -410,55 +415,162 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
   )
     actions.push("ai/retry");
   const base = roleBase(user?.role);
+  const source = incident.classificationSource;
+  const sourceLabel =
+    source === "AI"
+      ? "Generada por IA"
+      : source === "HUMAN"
+        ? "Revisión humana"
+        : "Origen sin registrar";
+  const SourceIcon =
+    source === "AI" ? Sparkles : source === "HUMAN" ? UserRound : ClipboardList;
+  const hasClassification = Boolean(
+    incident.improvedDescription ||
+    incident.recommendedAction ||
+    incident.category,
+  );
   return (
     <PanelPage
       title={incident.trackingCode}
-      description={`${enumLabel(incident.status)} · versión ${incident.version}`}
+      description="Detalle de la incidencia"
     >
-      <Link className="link" to={`${base}/incidents`}>
-        Volver a incidencias
-      </Link>
-      <section className="space-y-3 rounded-xl border border-base-300 bg-base-100 p-4">
-        <h2 className="font-bold">Reporte</h2>
-        <p className="whitespace-pre-wrap">{incident.originalMessage}</p>
-        {incident.improvedDescription && (
-          <p>
-            <strong>Revisión:</strong> {incident.improvedDescription}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link className="btn btn-ghost btn-sm" to={`${base}/incidents`}>
+          <ArrowLeft size={16} aria-hidden="true" />
+          Volver a incidencias
+        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <IncidentStatusBadge status={incident.status} />
+          <IncidentUrgencyBadge urgency={incident.urgency} />
+          <span className="text-xs text-base-content/60">
+            Versión {incident.version}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-4">
+          <section className="space-y-3 rounded-2xl border border-base-300 bg-base-100 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 font-semibold">
+                <MessageSquare size={18} aria-hidden="true" /> Reporte original
+              </h2>
+              <span className="badge badge-outline">Ciudadano</span>
+            </div>
+            <p className="whitespace-pre-wrap break-words leading-relaxed">
+              {incident.originalMessage}
+            </p>
+          </section>
+
+          <section className="space-y-4 rounded-2xl border border-base-300 bg-base-100 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 font-semibold">
+                <SourceIcon size={18} aria-hidden="true" /> Clasificación
+              </h2>
+              {hasClassification && (
+                <span
+                  className={`badge ${source === "AI" ? "badge-secondary badge-soft" : source === "HUMAN" ? "badge-info badge-soft" : "badge-outline"}`}
+                >
+                  {sourceLabel}
+                </span>
+              )}
+            </div>
+            {hasClassification ? (
+              <>
+                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-base-content/60">Tipo</dt>
+                    <dd className="font-medium">{enumLabel(incident.type)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-base-content/60">Categoría</dt>
+                    <dd className="font-medium">
+                      {enumLabel(incident.category)}
+                    </dd>
+                  </div>
+                </dl>
+                {source === "HUMAN" && incident.reviewedAt && (
+                  <p className="text-xs text-base-content/60">
+                    Revisada el {formatDate(incident.reviewedAt)}
+                  </p>
+                )}
+                {incident.improvedDescription && (
+                  <div className="space-y-1 border-t border-base-300 pt-3">
+                    <h3 className="text-sm font-semibold">
+                      Descripción de la clasificación
+                    </h3>
+                    <p className="whitespace-pre-wrap break-words leading-relaxed">
+                      {incident.improvedDescription}
+                    </p>
+                  </div>
+                )}
+                {incident.recommendedAction && (
+                  <div className="space-y-1 rounded-xl bg-base-200 p-4">
+                    <h3 className="text-sm font-semibold">
+                      Acción recomendada
+                    </h3>
+                    <p className="whitespace-pre-wrap break-words leading-relaxed">
+                      {incident.recommendedAction}
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-base-content/60">
+                Todavía no hay una clasificación registrada.
+              </p>
+            )}
+          </section>
+
+          {(incident.resolutionSummary || incident.rejectionReason) && (
+            <section className="space-y-2 rounded-2xl border border-base-300 bg-base-100 p-5">
+              <h2 className="font-semibold">
+                {incident.resolutionSummary
+                  ? "Resolución registrada"
+                  : "Motivo del rechazo"}
+              </h2>
+              <p className="whitespace-pre-wrap break-words leading-relaxed">
+                {incident.resolutionSummary ?? incident.rejectionReason}
+              </p>
+              {incident.rejectionComment && (
+                <p className="whitespace-pre-wrap break-words text-base-content/70">
+                  {incident.rejectionComment}
+                </p>
+              )}
+            </section>
+          )}
+        </div>
+
+        <section className="min-w-0 self-start space-y-3 rounded-2xl border border-base-300 bg-base-100 p-5">
+          <h2 className="flex items-center gap-2 font-semibold">
+            <MapPin size={18} aria-hidden="true" /> Ubicación reportada
+          </h2>
+          <p className="break-words">
+            {incident.address ?? "Sin dirección registrada"}
           </p>
-        )}
-        {incident.recommendedAction && (
-          <p>
-            <strong>Acción recomendada:</strong> {incident.recommendedAction}
+          {incident.addressReference && (
+            <p className="break-words text-sm text-base-content/70">
+              {incident.addressReference}
+            </p>
+          )}
+          <p className="font-mono text-xs text-base-content/65">
+            {incident.latitude}, {incident.longitude}
           </p>
-        )}
-        {incident.resolutionSummary && (
-          <p>
-            <strong>Resolución:</strong> {incident.resolutionSummary}
-          </p>
-        )}
-        {incident.rejectionReason && (
-          <p>
-            <strong>Rechazo:</strong> {incident.rejectionReason} ·{" "}
-            {incident.rejectionComment}
-          </p>
-        )}
-        <p>
-          {incident.address ?? "Sin dirección registrada"} · {incident.latitude}
-          , {incident.longitude}
-        </p>
-        <button
-          type="button"
-          className="btn btn-sm"
-          onClick={() => setMap(!map)}
-        >
-          {map ? "Ocultar ubicación" : "Ver ubicación"}
-        </button>
-        {map && (
-          <Suspense fallback={<p>Cargando mapa…</p>}>
-            <IncidentMap items={[incident]} base={base} />
-          </Suspense>
-        )}
-      </section>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline"
+            aria-expanded={map}
+            onClick={() => setMap(!map)}
+          >
+            {map ? "Ocultar mapa" : "Ver en el mapa"}
+          </button>
+          {map && (
+            <Suspense fallback={<p>Cargando mapa…</p>}>
+              <IncidentMap items={[incident]} base={base} />
+            </Suspense>
+          )}
+        </section>
+      </div>
       {currentAssignments.error && (
         <p className="alert alert-error">
           {errorMessage(currentAssignments.error)}
@@ -569,41 +681,15 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
               </button>
             </form>
           )}
-          {(download.error || operation.error) && (
+          {operation.error && (
             <p role="alert" className="alert alert-error">
-              {errorMessage(download.error ?? operation.error)}
+              {errorMessage(operation.error)}
             </p>
           )}
           <QueryView query={records.evidence}>
             {(data) => (
               <>
-                <PanelTable headers={["Archivo", "Estado", "Acción"]}>
-                  {data.items.map((x) => (
-                    <tr key={x.id}>
-                      <td>{x.fileName}</td>
-                      <td>{enumLabel(x.status)}</td>
-                      <td>
-                        <button
-                          className="btn btn-sm"
-                          disabled={
-                            download.isPending || x.status !== "AVAILABLE"
-                          }
-                          onClick={() =>
-                            download.mutate(
-                              { id: incident.id, evidenceId: x.id },
-                              {
-                                onSuccess: (blob) =>
-                                  downloadBlob(blob, x.fileName ?? "evidencia"),
-                              },
-                            )
-                          }
-                        >
-                          Descargar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </PanelTable>
+                <EvidenceGallery incidentId={incident.id} items={data.items} />
                 <Pager data={data} onPage={setPage} />
               </>
             )}

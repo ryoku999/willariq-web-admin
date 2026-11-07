@@ -1,3 +1,4 @@
+import EmbeddingProfilesPanel from "./EmbeddingProfilesPanel";
 import { enumLabel, localizeEnumFields } from "@/shared/utils/enum-labels";
 import { useState, type FormEvent } from "react";
 import {
@@ -362,6 +363,7 @@ export default function AiConfigurationPage() {
       title="Configuración de IA"
       description="Administra versiones de prompts, modelos y orden de proveedores."
     >
+      <EmbeddingProfilesPanel />
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Capacidad">
           <select
