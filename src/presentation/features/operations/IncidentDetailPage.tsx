@@ -1,3 +1,4 @@
+import { personName } from "@/shared/utils/panel-format";
 import { enumLabel } from "@/shared/utils/enum-labels";
 import { roleBase } from "@/shared/utils/operations-path";
 import { lazy, Suspense, useState, type FormEvent } from "react";
@@ -255,7 +256,9 @@ function WorkflowDialog({
                   </option>
                 ))}
                 {area && !areas.data?.items.some((row) => row.id === area) && (
-                  <option value={area}>{area}</option>
+                  <option value={area}>
+                    {assignment?.area?.name ?? "Área actual"}
+                  </option>
                 )}
               </select>
             </Field>
@@ -521,8 +524,13 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
               <PanelTable headers={["Área", "Responsable", "Estado", "Nota"]}>
                 {data.items.map((x) => (
                   <tr key={x.id}>
-                    <td>{x.areaId}</td>
-                    <td>{x.operatorId ?? "Sin responsable"}</td>
+                    <td>{x.area?.name ?? "Área no disponible"}</td>
+                    <td>
+                      {personName(x.operator) ||
+                        (x.operatorId
+                          ? "Responsable no disponible"
+                          : "Sin responsable")}
+                    </td>
                     <td>{enumLabel(x.status, "assignment")}</td>
                     <td>{x.note ?? "—"}</td>
                   </tr>
@@ -606,10 +614,10 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
         <QueryView query={records.jobs}>
           {(data) => (
             <>
-              <PanelTable headers={["Trabajo", "Estado", "Error"]}>
+              <PanelTable headers={["Fecha de solicitud", "Estado", "Error"]}>
                 {data.items.map((x) => (
                   <tr key={x.id}>
-                    <td>{x.id}</td>
+                    <td>{formatDate(x.createdAt)}</td>
                     <td>{enumLabel(x.status, "job")}</td>
                     <td>{enumLabel(x.errorSummary)}</td>
                   </tr>

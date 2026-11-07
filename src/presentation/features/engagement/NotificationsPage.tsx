@@ -37,6 +37,16 @@ export default function NotificationsPage() {
           Solo sin leer
         </label>
         <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            setUnread(false);
+            setPage(1);
+          }}
+        >
+          Limpiar filtros
+        </button>
+        <button
           className="btn"
           disabled={busy || count.data?.count === 0}
           onClick={() => readAll.mutate([], { onSuccess: () => setPage(1) })}

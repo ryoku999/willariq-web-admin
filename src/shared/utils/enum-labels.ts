@@ -1,3 +1,5 @@
+import { hideTechnicalIds } from "./panel-format";
+
 const labels: Readonly<Record<string, string>> = {
   ADMIN: "Administrador",
   SUPERVISOR: "Supervisor",
@@ -198,7 +200,7 @@ export function enumLabel(
   if (value == null || value === "") return "—";
   const overrides = context ? variants[context] : undefined;
   if (overrides && Object.hasOwn(overrides, value)) return overrides[value];
-  return Object.hasOwn(labels, value) ? labels[value] : value;
+  return Object.hasOwn(labels, value) ? labels[value] : hideTechnicalIds(value);
 }
 
 export function operationalMessage(text: string) {

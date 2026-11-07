@@ -1,4 +1,5 @@
-import { enumLabel } from "@/shared/utils/enum-labels";
+import { IncidentStatusBadge, IncidentUrgencyBadge } from "./IncidentBadges";
+import { statusColors, urgencyColor } from "./incident-colors";
 import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
 import { Link } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
@@ -26,41 +27,67 @@ export default function IncidentMap({
   const key = points
     .map((row) => row.id + ":" + row.latitude + ":" + row.longitude)
     .join("|");
+  const visibleStatuses = [...new Set(points.map((point) => point.status))];
+  const visibleUrgencies = [...new Set(points.map((point) => point.urgency))];
   return (
-    <MapContainer
-      key={key}
-      bounds={bounds}
-      boundsOptions={{ padding: [24, 24], maxZoom: 16 }}
-      scrollWheelZoom={false}
-      className="relative z-0 h-96 w-full rounded-xl"
-    >
-      <TileLayer
-        url={
-          import.meta.env.VITE_MAP_TILE_URL ||
-          "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-        }
-        attribution={
-          import.meta.env.VITE_MAP_ATTRIBUTION ||
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
-        }
-      />
-      {points.map((row) => (
-        <CircleMarker
-          key={row.id}
-          center={[row.latitude, row.longitude]}
-          radius={8}
-          pathOptions={{
-            color: row.urgency === "CRITICAL" ? "#b91c1c" : "#1d4ed8",
-            fillOpacity: 0.7,
-          }}
-        >
-          <Popup>
-            <Link to={`${base}/incidents/${row.id}`}>{row.trackingCode}</Link>
-            <br />
-            {row.address ?? enumLabel(row.status)}
-          </Popup>
-        </CircleMarker>
-      ))}
-    </MapContainer>
+    <section aria-label="Mapa de incidencias" className="space-y-3">
+      <div
+        className="flex flex-wrap gap-x-5 gap-y-2 rounded-xl border border-base-300 bg-base-100 p-3 text-sm"
+        aria-label="Leyenda del mapa"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <strong>Relleno · Estado</strong>
+          {visibleStatuses.map((status) => (
+            <IncidentStatusBadge key={status} status={status} />
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <strong>Borde · Urgencia</strong>
+          {visibleUrgencies.map((urgency) => (
+            <IncidentUrgencyBadge key={urgency ?? "none"} urgency={urgency} />
+          ))}
+        </div>
+      </div>
+      <MapContainer
+        key={key}
+        bounds={bounds}
+        boundsOptions={{ padding: [24, 24], maxZoom: 16 }}
+        scrollWheelZoom={false}
+        className="relative z-0 h-96 w-full rounded-xl"
+      >
+        <TileLayer
+          url={
+            import.meta.env.VITE_MAP_TILE_URL ||
+            "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          }
+          attribution={
+            import.meta.env.VITE_MAP_ATTRIBUTION ||
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+          }
+        />
+        {points.map((row) => (
+          <CircleMarker
+            key={row.id}
+            center={[row.latitude, row.longitude]}
+            radius={9}
+            pathOptions={{
+              color: urgencyColor(row.urgency),
+              fillColor: statusColors[row.status],
+              weight: row.urgency === "CRITICAL" ? 5 : 3,
+              fillOpacity: 0.9,
+            }}
+          >
+            <Popup>
+              <Link to={`${base}/incidents/${row.id}`}>{row.trackingCode}</Link>
+              {row.address && <p>{row.address}</p>}
+              <div className="mt-2 flex flex-wrap gap-2">
+                <IncidentStatusBadge status={row.status} />
+                <IncidentUrgencyBadge urgency={row.urgency} />
+              </div>
+            </Popup>
+          </CircleMarker>
+        ))}
+      </MapContainer>
+    </section>
   );
 }

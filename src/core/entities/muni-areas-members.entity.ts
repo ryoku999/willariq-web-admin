@@ -115,3 +115,10 @@ export interface MuniAreaDeleteMemberRes {
     status: UserStatus;
   };
 }
+
+export interface AreaMemberCandidate {
+  id: string;
+  firstName: string;
+  lastName: string | null;
+  email: string;
+}

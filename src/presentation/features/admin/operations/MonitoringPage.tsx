@@ -1,3 +1,4 @@
+import { personName } from "@/shared/utils/panel-format";
 import { enumLabel, localizeEnumFields } from "@/shared/utils/enum-labels";
 import { roleBase } from "@/shared/utils/operations-path";
 import { useState } from "react";
@@ -19,7 +20,11 @@ import {
   PanelTable,
   QueryView,
 } from "@/presentation/components/PanelControls";
-import { errorMessage, formatDate } from "@/shared/utils/panel-format";
+import {
+  errorMessage,
+  formatDate,
+  hideTechnicalIds,
+} from "@/shared/utils/panel-format";
 
 export function MonitoringPage() {
   const user = useAuthStore((s) => s.user);
@@ -70,18 +75,11 @@ export function MonitoringPage() {
             {(data) => (
               <>
                 <PanelTable
-                  headers={[
-                    "Fecha",
-                    "Trabajo",
-                    "Estado",
-                    "Incidencia",
-                    "Acción",
-                  ]}
+                  headers={["Fecha", "Estado", "Incidencia", "Acción"]}
                 >
                   {data.items.map((x) => (
                     <tr key={x.id}>
                       <td>{formatDate(x.createdAt)}</td>
-                      <td>{x.id}</td>
                       <td>{enumLabel(x.status, "job")}</td>
                       <td>
                         {x.incidentId && (
@@ -89,7 +87,7 @@ export function MonitoringPage() {
                             className="link"
                             to={`${base}/incidents/${x.incidentId}`}
                           >
-                            Ver incidencia
+                            {x.incident?.trackingCode ?? "Ver incidencia"}
                           </Link>
                         )}
                       </td>
@@ -130,6 +128,16 @@ export function MonitoringPage() {
                 ))}
               </select>
             </Field>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setStatus("");
+                setOutPage(1);
+              }}
+            >
+              Limpiar filtros
+            </button>
             <button className="btn" onClick={() => void outbox.refetch()}>
               Actualizar
             </button>
@@ -143,11 +151,30 @@ export function MonitoringPage() {
             {(data) => (
               <>
                 <PanelTable
-                  headers={["Trabajo", "Estado", "Intentos", "Error", "Acción"]}
+                  headers={[
+                    "Incidencia",
+                    "Fecha",
+                    "Estado",
+                    "Intentos",
+                    "Error",
+                    "Acción",
+                  ]}
                 >
                   {data.items.map((x) => (
                     <tr key={x.id}>
-                      <td>{x.aggregateId}</td>
+                      <td>
+                        {x.incident ? (
+                          <Link
+                            className="link"
+                            to={`${base}/incidents/${x.incident.id}`}
+                          >
+                            {x.incident.trackingCode}
+                          </Link>
+                        ) : (
+                          "Incidencia no disponible"
+                        )}
+                      </td>
+                      <td>{formatDate(x.createdAt)}</td>
                       <td>{enumLabel(x.status, "job")}</td>
                       <td>{x.attempts}</td>
                       <td>{enumLabel(x.lastError)}</td>
@@ -232,8 +259,6 @@ export function AuditPage() {
           setFilters({
             action: get("action"),
             entityType: get("entityType"),
-            entityId: get("entityId"),
-            actorId: get("actorId"),
             from: from ? `${from}T00:00:00-05:00` : undefined,
             to: to ? `${to}T23:59:59.999-05:00` : undefined,
           });
@@ -244,8 +269,6 @@ export function AuditPage() {
           [
             ["Acción", "action"],
             ["Entidad", "entityType"],
-            ["ID de entidad", "entityId"],
-            ["UUID del actor", "actorId"],
           ] as const
         ).map(([label, name]) => (
           <Field key={name} label={label}>
@@ -267,7 +290,7 @@ export function AuditPage() {
             setPage(1);
           }}
         >
-          Limpiar
+          Limpiar filtros
         </button>
       </form>
       <QueryView query={query}>
@@ -281,9 +304,13 @@ export function AuditPage() {
                   <td>{formatDate(x.createdAt)}</td>
                   <td>{enumLabel(x.action)}</td>
                   <td>
-                    {enumLabel(x.entityType)} · {x.entityId}
+                    {enumLabel(x.entityType)}
+                    {x.entityLabel && ` · ${enumLabel(x.entityLabel)}`}
                   </td>
-                  <td>{x.userId ?? "Sistema"}</td>
+                  <td>
+                    {personName(x.user) ||
+                      (x.userId ? "Usuario no disponible" : "Sistema")}
+                  </td>
                   <td>
                     <button
                       className="btn btn-sm"
@@ -307,16 +334,29 @@ export function AuditPage() {
                 <p>
                   {enumLabel(x.action)} · {formatDate(x.createdAt)}
                 </p>
-                <pre className="max-h-96 overflow-auto rounded bg-base-200 p-3">
-                  {JSON.stringify(
-                    localizeEnumFields({
-                      anterior: x.oldValue,
-                      actual: x.newValue,
-                    }),
-                    null,
-                    2,
-                  )}
-                </pre>
+                <p>
+                  {enumLabel(x.entityType)}
+                  {x.entityLabel && ` · ${enumLabel(x.entityLabel)}`} ·{" "}
+                  {personName(x.user) ||
+                    (x.userId ? "Usuario no disponible" : "Sistema")}
+                </p>
+                <details>
+                  <summary className="cursor-pointer font-medium">
+                    Ver valores del cambio
+                  </summary>
+                  <pre className="max-h-96 overflow-auto rounded bg-base-200 p-3">
+                    {hideTechnicalIds(
+                      JSON.stringify(
+                        localizeEnumFields({
+                          anterior: x.oldValue,
+                          actual: x.newValue,
+                        }),
+                        null,
+                        2,
+                      ),
+                    )}
+                  </pre>
+                </details>
               </>
             )}
           </QueryView>

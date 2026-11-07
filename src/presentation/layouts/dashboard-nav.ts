@@ -1,6 +1,5 @@
 import {
   LayoutDashboard,
-  UserRound,
   UsersRound,
   Bell,
   Building2,
@@ -57,7 +56,6 @@ export const allNavItems: NavGroup[] = [
       { label: "Conocimiento", to: "/knowledge", icon: BookOpen },
       { label: "Auditoría", to: "/audit", icon: FileClock },
       { label: "Chatbot", to: "/chat", icon: MessagesSquare },
-      { label: "Mi perfil", to: "/profile", icon: UserRound },
     ],
   },
   {
@@ -71,7 +69,6 @@ export const allNavItems: NavGroup[] = [
       },
       ...operations("/supervisor"),
       { label: "Trabajos IA", to: "/supervisor/ai/jobs", icon: Activity },
-      { label: "Mi perfil", to: "/supervisor/profile", icon: UserRound },
     ],
   },
   {
@@ -84,7 +81,6 @@ export const allNavItems: NavGroup[] = [
         exact: true,
       },
       ...operations("/operator"),
-      { label: "Mi perfil", to: "/operator/profile", icon: UserRound },
     ],
   },
 ];

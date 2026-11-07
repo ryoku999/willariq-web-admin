@@ -65,7 +65,7 @@ export const routes = createBrowserRouter([
         path: "/",
         element: (
           <Suspense fallback={<LazyLoading />}>
-            <DashboardPage />,
+            <DashboardPage />
           </Suspense>
         ),
       },
@@ -74,7 +74,7 @@ export const routes = createBrowserRouter([
         path: "/profile",
         element: (
           <Suspense fallback={<LazyLoading />}>
-            <ProfilePage />,
+            <ProfilePage />
           </Suspense>
         ),
       },

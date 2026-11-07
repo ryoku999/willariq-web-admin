@@ -37,6 +37,8 @@ export interface ProviderStatus {
 export interface AuditEntry {
   id: string;
   userId: string | null;
+  user: { firstName: string; lastName: string | null } | null;
+  entityLabel: string | null;
   action: string;
   entityType: string;
   entityId: string | null;
@@ -47,6 +49,7 @@ export interface AuditEntry {
 export interface OutboxEntry {
   id: string;
   aggregateId: string;
+  incident: { id: string; trackingCode: string } | null;
   status: string;
   attempts: number;
   lastError: string | null;
@@ -54,6 +57,7 @@ export interface OutboxEntry {
 }
 export interface AdminJob extends Job {
   incidentId: string | null;
+  incident: { trackingCode: string } | null;
   finalModel?: string | null;
   attempts?: {
     id: string;

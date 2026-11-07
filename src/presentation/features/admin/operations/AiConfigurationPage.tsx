@@ -21,7 +21,7 @@ import {
   PanelTable,
   QueryView,
 } from "@/presentation/components/PanelControls";
-import { errorMessage } from "@/shared/utils/panel-format";
+import { errorMessage, hideTechnicalIds } from "@/shared/utils/panel-format";
 
 const chatSchema = {
   type: "object",
@@ -410,7 +410,7 @@ export default function AiConfigurationPage() {
       )}
       {check.data !== undefined && (
         <pre className="overflow-auto rounded bg-base-100 p-3">
-          {JSON.stringify(localizeEnumFields(check.data), null, 2)}
+          {hideTechnicalIds(JSON.stringify(localizeEnumFields(check.data), null, 2))}
         </pre>
       )}
       <div className="flex justify-between">

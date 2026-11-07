@@ -1,10 +1,11 @@
 import { useUnreadCount } from "@/infrastructure/hooks/use-engagement";
-import { LogOut, Menu, X, ChevronDown } from "lucide-react";
+import { LogOut, Menu, X, ChevronDown, ChevronRight } from "lucide-react";
 import { useState, type PropsWithChildren } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/infrastructure/storage/auth-storage";
 import type { UserRole } from "@/shared/interfaces/auth-storage.interface";
 import { useLogout } from "@/infrastructure/hooks/use-auth";
+import { roleBase } from "@/shared/utils/operations-path";
 import { allNavItems, matchesPath } from "./dashboard-nav";
 
 type DashboardLayoutProps = PropsWithChildren<{ role: UserRole }>;
@@ -24,6 +25,12 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
   const items = allNavItems
     .filter((group) => group.role === role)
     .flatMap((group) => group.children);
+  const profilePath = `${roleBase(role)}/profile`;
+  const initials =
+    [user?.name, user?.lastName]
+      .map((part) => part?.trim().charAt(0))
+      .join("")
+      .toLocaleUpperCase("es-PE") || "U";
   const activeItem = items.find((item) =>
     matchesPath(location.pathname, item.to, item.exact),
   );
@@ -138,29 +145,28 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
             );
           })}
         </nav>
-        <div className="mt-auto rounded-2xl bg-base-200 p-3">
-          <div className="mb-3 flex items-center gap-3 px-1">
-            <div className="avatar placeholder">
-              <div className="w-10 rounded-full bg-primary/15 text-primary">
-                <span className="font-bold">{user?.name?.[0] ?? "U"}</span>
-              </div>
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold">
-                {user?.name} {user?.lastName}
-              </p>
-              <p className="text-xs text-base-content/50">{roleLabels[role]}</p>
-            </div>
-          </div>
-          <button
-            onClick={() => logout.mutate()}
-            disabled={logout.isPending}
-            className="btn btn-ghost btn-sm w-full justify-start gap-3 text-error hover:bg-error/10"
+        <NavLink
+          to={profilePath}
+          end
+          onClick={() => setMobileOpen(false)}
+          className={({ isActive }) =>
+            `mt-3 flex items-center gap-3 rounded-2xl p-3 transition focus-visible:outline-2 focus-visible:outline-primary ${isActive ? "bg-primary/10" : "bg-base-200 hover:bg-base-300"}`
+          }
+        >
+          <span
+            aria-hidden="true"
+            className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/15 text-sm font-bold leading-none text-primary"
           >
-            <LogOut size={17} />
-            Cerrar sesión
-          </button>
-        </div>
+            {initials}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-bold">
+              {user?.name} {user?.lastName}
+            </span>
+            <span className="block text-xs text-base-content/60">Mi perfil</span>
+          </span>
+          <ChevronRight size={16} aria-hidden="true" className="shrink-0" />
+        </NavLink>
       </aside>
       <div className="lg:pl-72">
         <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-base-300 bg-base-100/90 px-5 backdrop-blur sm:px-8">
@@ -181,13 +187,14 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
                   matchesPath(location.pathname, child.to, child.exact),
                 )?.label ??
                   activeItem?.label ??
-                  "Panel"}
+                  (location.pathname === profilePath ? "Mi perfil" : "Panel")}
               </h1>
             </div>
           </div>
           <button
             onClick={() => logout.mutate()}
             disabled={logout.isPending}
+            aria-label="Cerrar sesión"
             className="btn btn-outline btn-sm gap-2 border-base-300 text-base-content/70 hover:border-error hover:bg-error hover:text-error-content"
           >
             <LogOut size={16} />

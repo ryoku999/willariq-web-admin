@@ -33,6 +33,13 @@ export const useAreaMembers = (
       members.listMembers({ muniAreaId: id, qry: { page, limit, active } }),
     enabled: !!id,
   });
+export const useAreaMemberCandidates = (id: string, search: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ["municipal-areas", id, "member-candidates", search],
+    queryFn: () => members.searchCandidates(id, search),
+    enabled: enabled && search.length >= 2,
+  });
+
 type AreaMutation =
   | { type: "create"; data: MuniAreasCreateReq }
   | { type: "update"; data: MuniAreasUpdateReq }

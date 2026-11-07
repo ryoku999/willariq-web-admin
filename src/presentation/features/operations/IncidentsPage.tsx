@@ -1,3 +1,4 @@
+import { IncidentStatusBadge, IncidentUrgencyBadge } from "./IncidentBadges";
 import { enumLabel } from "@/shared/utils/enum-labels";
 import { roleBase } from "@/shared/utils/operations-path";
 import { lazy, Suspense, useState } from "react";
@@ -21,25 +22,31 @@ import LoadingState from "@/presentation/components/LoadingState";
 
 const IncidentMap = lazy(() => import("./IncidentMap"));
 
+const emptyFilters = {
+  code: "",
+  status: "",
+  urgency: "",
+  area: "",
+  supervision: false,
+};
+
 export default function IncidentsPage() {
   const base = roleBase(useAuthStore((s) => s.user?.role));
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState("");
-  const [urgency, setUrgency] = useState("");
-  const [code, setCode] = useState("");
-  const [area, setArea] = useState("");
-  const [supervision, setSupervision] = useState(false);
+  const [draft, setDraft] = useState(emptyFilters);
+  const [filters, setFilters] = useState(emptyFilters);
   const [map, setMap] = useState(false);
-  const [search, setSearch] = useState("");
   const query = useIncidents({
     page,
     limit: 20,
-    status: status || undefined,
-    urgency: urgency || undefined,
-    trackingCode: search || undefined,
-    areaId: area || undefined,
-    requiresSupervision: supervision || undefined,
+    status: filters.status || undefined,
+    urgency: filters.urgency || undefined,
+    trackingCode: filters.code || undefined,
+    areaId: filters.area || undefined,
+    requiresSupervision: filters.supervision || undefined,
   });
+  const activeCount = Object.values(filters).filter(Boolean).length;
+  const hasFilters = activeCount > 0 || Object.values(draft).some(Boolean);
   const areas = useAreas(1, undefined, undefined, 100);
   return (
     <PanelPage
@@ -47,94 +54,125 @@ export default function IncidentsPage() {
       description="Bandeja y ubicaciones dentro del alcance de tu cuenta."
     >
       <form
-        className="flex flex-wrap items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setSearch(code.trim());
+        className="space-y-4 rounded-2xl border border-base-300 bg-base-100 p-4 sm:p-5"
+        aria-label="Filtros de incidencias"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setFilters({ ...draft, code: draft.code.trim() });
           setPage(1);
         }}
       >
-        <Field label="Código">
-          <input
-            className="input"
-            value={code}
-            maxLength={30}
-            onChange={(e) => setCode(e.target.value)}
-          />
-        </Field>
-        <Field label="Estado">
-          <select
-            className="select"
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">Todos</option>
-            {statuses.map((x) => (
-              <option key={x} value={x}>
-                {enumLabel(x)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Urgencia">
-          <select
-            className="select"
-            value={urgency}
-            onChange={(e) => {
-              setUrgency(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">Todas</option>
-            {urgencies.map((x) => (
-              <option key={x} value={x}>
-                {enumLabel(x)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Área">
-          <select
-            className="select"
-            value={area}
-            onChange={(e) => {
-              setArea(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">Todas</option>
-            {areas.data?.items.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <label className="flex items-center gap-2 pb-2 text-sm">
-          <input
-            type="checkbox"
-            className="checkbox checkbox-sm"
-            checked={supervision}
-            onChange={(event) => {
-              setSupervision(event.target.checked);
-              setPage(1);
-            }}
-          />
-          Solo requiere supervisión
-        </label>
-        <button className="btn btn-primary">Buscar</button>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="font-semibold">Filtros de incidencias</h2>
+          {activeCount > 0 && (
+            <span className="badge badge-ghost">
+              {activeCount}{" "}
+              {activeCount === 1 ? "filtro aplicado" : "filtros aplicados"}
+            </span>
+          )}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Field label="Código de seguimiento">
+            <input
+              className="input w-full"
+              value={draft.code}
+              maxLength={30}
+              placeholder="Buscar por código"
+              onChange={(event) =>
+                setDraft({ ...draft, code: event.target.value })
+              }
+            />
+          </Field>
+          <Field label="Área municipal">
+            <select
+              className="select w-full"
+              value={draft.area}
+              onChange={(event) =>
+                setDraft({ ...draft, area: event.target.value })
+              }
+            >
+              <option value="">Todas las áreas</option>
+              {areas.data?.items.map((area) => (
+                <option key={area.id} value={area.id}>
+                  {area.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Estado">
+            <select
+              className="select w-full"
+              value={draft.status}
+              onChange={(event) =>
+                setDraft({ ...draft, status: event.target.value })
+              }
+            >
+              <option value="">Todos los estados</option>
+              {statuses.map((status) => (
+                <option key={status} value={status}>
+                  {enumLabel(status)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Urgencia">
+            <select
+              className="select w-full"
+              value={draft.urgency}
+              onChange={(event) =>
+                setDraft({ ...draft, urgency: event.target.value })
+              }
+            >
+              <option value="">Todas las urgencias</option>
+              {urgencies.map((urgency) => (
+                <option key={urgency} value={urgency}>
+                  {enumLabel(urgency)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 pt-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="checkbox checkbox-sm"
+              checked={draft.supervision}
+              onChange={(event) =>
+                setDraft({ ...draft, supervision: event.target.checked })
+              }
+            />
+            Solo incidencias que requieren supervisión
+          </label>
+          <div className="flex gap-2">
+            <button
+              className="btn btn-ghost"
+              type="button"
+              disabled={!hasFilters}
+              onClick={() => {
+                setDraft(emptyFilters);
+                setFilters(emptyFilters);
+                setPage(1);
+              }}
+            >
+              Limpiar filtros
+            </button>
+            <button className="btn btn-primary" type="submit">
+              Aplicar filtros
+            </button>
+          </div>
+        </div>
+      </form>
+      <div className="flex justify-end">
         <button
           className="btn"
           type="button"
           aria-pressed={map}
-          onClick={() => setMap(!map)}
+          onClick={() => setMap((current) => !current)}
         >
           {map ? "Ocultar mapa" : "Ver mapa"}
         </button>
-      </form>
+      </div>
       <QueryView query={query}>
         {(data) => (
           <>
@@ -168,14 +206,16 @@ export default function IncidentsPage() {
                     </Link>
                   </td>
                   <td>
-                    {enumLabel(row.status)}
+                    <IncidentStatusBadge status={row.status} />
                     {row.requiresSupervision && (
                       <span className="badge badge-warning ml-2">
                         Supervisión
                       </span>
                     )}
                   </td>
-                  <td>{enumLabel(row.urgency)}</td>
+                  <td>
+                    <IncidentUrgencyBadge urgency={row.urgency} />
+                  </td>
                   <td>{row.address ?? "—"}</td>
                   <td>{formatDate(row.createdAt)}</td>
                 </tr>
@@ -198,7 +238,7 @@ export function MyAssignmentsPage() {
       <QueryView query={query}>
         {(data) => (
           <>
-            <PanelTable headers={["Incidencia", "Estado", "Nota"]}>
+            <PanelTable headers={["Incidencia", "Área", "Estado", "Nota"]}>
               {data.items.map((row) => (
                 <tr key={row.id}>
                   <td>
@@ -206,9 +246,10 @@ export function MyAssignmentsPage() {
                       className="link link-primary"
                       to={`${base}/incidents/${row.incidentId}`}
                     >
-                      Ver incidencia
+                      {row.incident?.trackingCode ?? "Ver incidencia"}
                     </Link>
                   </td>
+                  <td>{row.area?.name ?? "Área no disponible"}</td>
                   <td>{enumLabel(row.status, "assignment")}</td>
                   <td>{row.note ?? "—"}</td>
                 </tr>

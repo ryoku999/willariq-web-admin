@@ -1,10 +1,15 @@
 import { isAxiosError } from "axios";
 
+export function hideTechnicalIds(text: string) {
+  return text.replace(/\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b/gi, "—");
+}
+
 export function errorMessage(error: unknown) {
   if (isAxiosError<{ message?: string | string[] }>(error)) {
     const status = error.response?.status;
     const message = error.response?.data?.message;
-    const text = Array.isArray(message) ? message.join(" · ") : message;
+    const detail = Array.isArray(message) ? message.join(" · ") : message;
+    const text = detail ? hideTechnicalIds(detail) : undefined;
     if (status === 409)
       return `${text ?? "Conflicto con el estado actual."} Revisa los datos actualizados antes de volver a intentar.`;
     if (status === 403)
@@ -18,7 +23,7 @@ export function errorMessage(error: unknown) {
     return text ?? "No se pudo completar la solicitud a la API.";
   }
   return error instanceof Error
-    ? error.message
+    ? hideTechnicalIds(error.message)
     : "No se pudo completar la operación.";
 }
 export function downloadBlob(blob: Blob, name: string) {
@@ -35,3 +40,11 @@ export const formatDate = (date: string) =>
     timeStyle: "short",
     timeZone: "America/Lima",
   }).format(new Date(date));
+
+export function personName(
+  person: { firstName: string; lastName: string | null } | null | undefined,
+) {
+  return person
+    ? [person.firstName, person.lastName].filter(Boolean).join(" ")
+    : "";
+}

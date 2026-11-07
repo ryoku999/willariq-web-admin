@@ -2,6 +2,7 @@ import http from "@/config/http/axios";
 import type { MuniAreasMembersRepository } from "@/core/contracts/muni-areas-members.repository";
 import type {
   AddMuniAreaMemberReq,
+  AreaMemberCandidate,
   AddMuniAreaMemberRes,
   MuniAreaDeleteMemberReq,
   MuniAreaDeleteMemberRes,
@@ -14,6 +15,14 @@ import type { AxiosInstance } from "axios";
 class MuniAreasMembersService implements MuniAreasMembersRepository {
   private readonly http: AxiosInstance = http;
   private readonly prefix = "/municipal-areas";
+
+  async searchCandidates(areaId: string, search: string) {
+    const { data } = await this.http.get<ApiEnvelope<AreaMemberCandidate[]>>(
+      `${this.prefix}/${areaId}/member-candidates`,
+      { params: { search } },
+    );
+    return data.data;
+  }
 
   async addMember(dto: AddMuniAreaMemberReq): Promise<AddMuniAreaMemberRes> {
     const { data } = await this.http.post<ApiEnvelope<AddMuniAreaMemberRes>>(

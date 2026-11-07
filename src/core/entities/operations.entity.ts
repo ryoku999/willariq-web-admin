@@ -100,6 +100,9 @@ export interface Assignment {
   version: number;
   status: string;
   note: string | null;
+  area: { name: string; code: string };
+  operator?: { firstName: string; lastName: string | null } | null;
+  incident: { trackingCode: string };
 }
 export interface HistoryEntry {
   id: string;

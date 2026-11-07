@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import type { MuniAreasListItems } from "@/core/entities/muni-areas.entity";
 import {
   useAreaMembers,
+  useAreaMemberCandidates,
   useAreaMutation,
   useAreas,
 } from "@/infrastructure/hooks/use-municipal-areas";
@@ -16,7 +17,7 @@ import {
   PanelTable,
   QueryView,
 } from "@/presentation/components/PanelControls";
-import { errorMessage } from "@/shared/utils/panel-format";
+import { errorMessage, personName } from "@/shared/utils/panel-format";
 
 function AreaForm({
   area,
@@ -121,6 +122,14 @@ function Members({
 }) {
   const [page, setPage] = useState(1);
   const [active, setActive] = useState(true);
+  const [search, setSearch] = useState("");
+  const [candidateSearch, setCandidateSearch] = useState("");
+  const [candidateId, setCandidateId] = useState("");
+  const canAdd = editable && area.status === "ACTIVE";
+  const candidates = useAreaMemberCandidates(area.id, candidateSearch, canAdd);
+  const selectedCandidate = candidates.data?.find(
+    (person) => person.id === candidateId,
+  );
   const query = useAreaMembers(area.id, page, active);
   const mutation = useAreaMutation();
   return (
@@ -129,48 +138,115 @@ function Members({
       onClose={onClose}
       busy={mutation.isPending}
     >
-      {editable && (
+      {canAdd && (
         <form
           className="flex flex-wrap items-end gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            const form = e.currentTarget;
-            const fields = new FormData(form);
-            mutation.mutate(
-              {
-                type: "add",
-                data: {
-                  muniAreaId: area.id,
-                  payload: {
-                    userId: String(fields.get("userId")).trim(),
-                    role:
-                      fields.get("role") === "MANAGER" ? "MANAGER" : "OPERATOR",
-                  },
-                },
-              },
-              {
-                onSuccess: () => {
-                  form.reset();
-                  setActive(true);
-                  setPage(1);
-                },
-              },
-            );
+            setCandidateSearch(search.trim());
+            setCandidateId("");
           }}
         >
-          <Field label="UUID de usuario">
-            <input className="input" name="userId" required maxLength={36} />
+          <Field label="Buscar personal por nombre o correo">
+            <input
+              className="input"
+              value={search}
+              maxLength={160}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </Field>
-          <Field label="Membresía">
-            <select className="select" name="role">
-              <option value="OPERATOR">{enumLabel("OPERATOR")}</option>
-              <option value="MANAGER">{enumLabel("MANAGER")}</option>
-            </select>
-          </Field>
-          <button className="btn btn-primary" disabled={mutation.isPending}>
-            Agregar o reactivar
+          <button
+            className="btn"
+            disabled={search.trim().length < 2 || mutation.isPending}
+          >
+            Buscar
           </button>
         </form>
+      )}
+      <button
+        type="button"
+        className="btn btn-sm w-fit"
+        onClick={() => {
+          setSearch("");
+          setCandidateSearch("");
+          setCandidateId("");
+          setActive(true);
+          setPage(1);
+        }}
+      >
+        Limpiar filtros
+      </button>
+      {canAdd && candidateSearch && (
+        <QueryView query={candidates}>
+          {(people) =>
+            people.length ? (
+              <form
+                className="flex flex-wrap items-end gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!selectedCandidate) return;
+                  const form = e.currentTarget;
+                  const fields = new FormData(form);
+                  mutation.mutate(
+                    {
+                      type: "add",
+                      data: {
+                        muniAreaId: area.id,
+                        payload: {
+                          userId: selectedCandidate.id,
+                          role:
+                            fields.get("role") === "MANAGER"
+                              ? "MANAGER"
+                              : "OPERATOR",
+                        },
+                      },
+                    },
+                    {
+                      onSuccess: () => {
+                        form.reset();
+                        setCandidateId("");
+                        setCandidateSearch("");
+                        setSearch("");
+                        setActive(true);
+                        setPage(1);
+                      },
+                    },
+                  );
+                }}
+              >
+                <Field label="Persona">
+                  <select
+                    className="select w-full"
+                    required
+                    value={selectedCandidate?.id ?? ""}
+                    onChange={(e) => setCandidateId(e.target.value)}
+                  >
+                    <option value="">Selecciona una persona</option>
+                    {people.map((person) => (
+                      <option key={person.id} value={person.id}>
+                        {personName(person)} · {person.email}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Función en el área">
+                  <select className="select" name="role">
+                    <option value="OPERATOR">{enumLabel("OPERATOR")}</option>
+                    <option value="MANAGER">{enumLabel("MANAGER")}</option>
+                  </select>
+                </Field>
+                <button
+                  className="btn btn-primary"
+                  disabled={!selectedCandidate || mutation.isPending}
+                >
+                  Agregar o reactivar
+                </button>
+              </form>
+            ) : (
+              <p>No se encontró personal disponible para esta área.</p>
+            )
+          }
+        </QueryView>
       )}
       <label className="flex items-center gap-2">
         <input
@@ -192,7 +268,7 @@ function Members({
       <QueryView query={query}>
         {(data) => (
           <>
-            <PanelTable headers={["Usuario", "Membresía", "Acción"]}>
+            <PanelTable headers={["Usuario", "Función en el área", "Acción"]}>
               {data.items.map((row) => (
                 <tr key={row.id}>
                   <td>
@@ -257,6 +333,17 @@ export default function MuniAreasListPage() {
           onChange={(e) => setSearch(e.target.value)}
         />
         <button className="btn">Buscar</button>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            setSearch("");
+            setFilter("");
+            setPage(1);
+          }}
+        >
+          Limpiar filtros
+        </button>
         {role === "ADMIN" && (
           <button
             type="button"
