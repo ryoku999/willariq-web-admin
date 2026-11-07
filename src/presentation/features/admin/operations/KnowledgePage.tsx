@@ -1,3 +1,4 @@
+import { enumLabel } from "@/shared/utils/enum-labels";
 import { useState } from "react";
 import {
   useAdminAction,
@@ -35,7 +36,7 @@ function DocumentDetail({ id, onClose }: { id: string; onClose: () => void }) {
         {(doc) => (
           <>
             <p className="font-semibold">
-              {doc.title} · {doc.status} · v{doc.version}
+              {doc.title} · {enumLabel(doc.status)} · v{doc.version}
             </p>
             <ul>
               {doc.publications.map((x) => (
@@ -108,7 +109,7 @@ function DocumentDetail({ id, onClose }: { id: string; onClose: () => void }) {
                 <tr key={job.id}>
                   <td>{formatDate(job.createdAt)}</td>
                   <td>
-                    {job.status}{" "}
+                    {enumLabel(job.status, "job")}{" "}
                     {job.dispatchStatus === "DEAD" ? "· Despacho fallido" : ""}
                   </td>
                   <td>
@@ -116,7 +117,7 @@ function DocumentDetail({ id, onClose }: { id: string; onClose: () => void }) {
                       ? `${job.finalOutput.embedded}/${job.finalOutput.total}`
                       : "—"}
                   </td>
-                  <td>{job.errorSummary ?? "—"}</td>
+                  <td>{enumLabel(job.errorSummary)}</td>
                 </tr>
               ))}
             </PanelTable>
@@ -156,8 +157,8 @@ export default function KnowledgePage() {
               {data.items.map((doc) => (
                 <tr key={doc.id}>
                   <td>{doc.title}</td>
-                  <td>{doc.sourceType}</td>
-                  <td>{doc.status}</td>
+                  <td>{enumLabel(doc.sourceType)}</td>
+                  <td>{enumLabel(doc.status)}</td>
                   <td>{doc.publications.length}</td>
                   <td>
                     <button
@@ -220,7 +221,9 @@ export default function KnowledgePage() {
                   "PROCEDURE",
                   "OTHER",
                 ].map((x) => (
-                  <option key={x}>{x}</option>
+                  <option key={x} value={x}>
+                    {enumLabel(x)}
+                  </option>
                 ))}
               </select>
             </Field>

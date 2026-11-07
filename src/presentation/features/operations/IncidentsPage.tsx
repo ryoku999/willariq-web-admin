@@ -1,3 +1,4 @@
+import { enumLabel } from "@/shared/utils/enum-labels";
 import { roleBase } from "@/shared/utils/operations-path";
 import { lazy, Suspense, useState } from "react";
 import { Link } from "react-router-dom";
@@ -72,7 +73,9 @@ export default function IncidentsPage() {
           >
             <option value="">Todos</option>
             {statuses.map((x) => (
-              <option key={x}>{x}</option>
+              <option key={x} value={x}>
+                {enumLabel(x)}
+              </option>
             ))}
           </select>
         </Field>
@@ -87,7 +90,9 @@ export default function IncidentsPage() {
           >
             <option value="">Todas</option>
             {urgencies.map((x) => (
-              <option key={x}>{x}</option>
+              <option key={x} value={x}>
+                {enumLabel(x)}
+              </option>
             ))}
           </select>
         </Field>
@@ -163,14 +168,14 @@ export default function IncidentsPage() {
                     </Link>
                   </td>
                   <td>
-                    {row.status}
+                    {enumLabel(row.status)}
                     {row.requiresSupervision && (
                       <span className="badge badge-warning ml-2">
                         Supervisión
                       </span>
                     )}
                   </td>
-                  <td>{row.urgency ?? "—"}</td>
+                  <td>{enumLabel(row.urgency)}</td>
                   <td>{row.address ?? "—"}</td>
                   <td>{formatDate(row.createdAt)}</td>
                 </tr>
@@ -204,7 +209,7 @@ export function MyAssignmentsPage() {
                       Ver incidencia
                     </Link>
                   </td>
-                  <td>{row.status}</td>
+                  <td>{enumLabel(row.status, "assignment")}</td>
                   <td>{row.note ?? "—"}</td>
                 </tr>
               ))}

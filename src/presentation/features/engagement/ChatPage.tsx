@@ -1,3 +1,4 @@
+import { enumLabel, operationalMessage } from "@/shared/utils/enum-labels";
 import { useEffect, useState } from "react";
 import type { ChatInput } from "@/core/entities/engagement.entity";
 import {
@@ -43,7 +44,8 @@ function Conversation({ id }: { id: string }) {
         <section className="grid gap-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-xl font-bold">
-              {conversation.title ?? "Conversación"} · {conversation.status}
+              {conversation.title ?? "Conversación"} ·{" "}
+              {enumLabel(conversation.status, "conversation")}
             </h2>
             <div className="flex gap-2">
               <button
@@ -77,7 +79,9 @@ function Conversation({ id }: { id: string }) {
                     >
                       <strong>{x.role === "USER" ? "Tú" : "Asistente"}</strong>
                       <p className="whitespace-pre-wrap break-words">
-                        {x.content}
+                        {x.role === "ASSISTANT"
+                          ? operationalMessage(x.content)
+                          : x.content}
                       </p>
                       {!!x.metadata?.sources?.length && (
                         <ul
@@ -102,8 +106,9 @@ function Conversation({ id }: { id: string }) {
           </QueryView>
           {jobId && (
             <p className="text-sm" aria-live="polite">
-              Trabajo: {jobState ?? "Consultando"}{" "}
-              {job.data?.errorSummary && `· ${job.data.errorSummary}`}
+              Trabajo: {jobState ? enumLabel(jobState, "job") : "Consultando"}{" "}
+              {job.data?.errorSummary &&
+                `· ${enumLabel(job.data.errorSummary)}`}
             </p>
           )}
           {dead && request && conversation.status === "ACTIVE" && (
@@ -226,7 +231,8 @@ export default function ChatPage() {
                   className={`btn btn-sm ${selected === session.id ? "btn-primary" : ""}`}
                   onClick={() => setSelected(session.id)}
                 >
-                  {session.title ?? "Conversación"} · {session.status}
+                  {session.title ?? "Conversación"} ·{" "}
+                  {enumLabel(session.status, "conversation")}
                 </button>
               ))}
             </div>

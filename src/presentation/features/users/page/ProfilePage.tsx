@@ -1,3 +1,4 @@
+import { enumLabel } from "@/shared/utils/enum-labels";
 import { AccountSettings } from "../../engagement/AccountPages";
 import { useUserProfile } from "@/infrastructure/hooks/use-users";
 import ErrorState from "@/presentation/components/ErrorState";
@@ -137,7 +138,7 @@ const ProfilePage = () => {
             className={`badge gap-1.5 px-3 py-3 font-semibold ${isActive ? "badge-success" : "badge-ghost"}`}
           >
             <CheckCircle2 size={14} />
-            {isActive ? "Activa" : user.status}
+            {isActive ? "Activa" : enumLabel(user.status)}
           </span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">

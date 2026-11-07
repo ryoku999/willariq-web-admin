@@ -1,3 +1,4 @@
+import { enumLabel, localizeEnumFields } from "@/shared/utils/enum-labels";
 import { useState, type FormEvent } from "react";
 import {
   capabilities,
@@ -278,7 +279,9 @@ function RouteForm({
             <Field label="Proveedor">
               <select name="provider" className="select">
                 {providers.map((x) => (
-                  <option key={x}>{x}</option>
+                  <option key={x} value={x}>
+                    {enumLabel(x)}
+                  </option>
                 ))}
               </select>
             </Field>
@@ -372,7 +375,9 @@ export default function AiConfigurationPage() {
             }}
           >
             {capabilities.map((x) => (
-              <option key={x}>{x}</option>
+              <option key={x} value={x}>
+                {enumLabel(x)}
+              </option>
             ))}
           </select>
         </Field>
@@ -405,7 +410,7 @@ export default function AiConfigurationPage() {
       )}
       {check.data !== undefined && (
         <pre className="overflow-auto rounded bg-base-100 p-3">
-          {JSON.stringify(check.data, null, 2)}
+          {JSON.stringify(localizeEnumFields(check.data), null, 2)}
         </pre>
       )}
       <div className="flex justify-between">

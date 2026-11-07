@@ -1,3 +1,4 @@
+import { enumLabel } from "@/shared/utils/enum-labels";
 import { useState, type FormEvent } from "react";
 import type { MuniAreasListItems } from "@/core/entities/muni-areas.entity";
 import {
@@ -162,8 +163,8 @@ function Members({
           </Field>
           <Field label="Membresía">
             <select className="select" name="role">
-              <option>OPERATOR</option>
-              <option>MANAGER</option>
+              <option value="OPERATOR">{enumLabel("OPERATOR")}</option>
+              <option value="MANAGER">{enumLabel("MANAGER")}</option>
             </select>
           </Field>
           <button className="btn btn-primary" disabled={mutation.isPending}>
@@ -197,7 +198,7 @@ function Members({
                   <td>
                     {row.user.firstName} {row.user.lastName}
                   </td>
-                  <td>{row.role}</td>
+                  <td>{enumLabel(row.role)}</td>
                   <td>
                     {editable && row.active && (
                       <button
@@ -279,7 +280,7 @@ export default function MuniAreasListPage() {
                 <tr key={area.id}>
                   <td>{area.code}</td>
                   <td>{area.name}</td>
-                  <td>{area.status}</td>
+                  <td>{enumLabel(area.status, "area")}</td>
                   <td className="space-x-2">
                     {(role !== "OPERATOR" ||
                       summary.data?.managedAreaIds.includes(area.id)) && (

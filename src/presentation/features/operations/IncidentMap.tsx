@@ -1,3 +1,4 @@
+import { enumLabel } from "@/shared/utils/enum-labels";
 import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
 import { Link } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
@@ -56,7 +57,7 @@ export default function IncidentMap({
           <Popup>
             <Link to={`${base}/incidents/${row.id}`}>{row.trackingCode}</Link>
             <br />
-            {row.address ?? row.status}
+            {row.address ?? enumLabel(row.status)}
           </Popup>
         </CircleMarker>
       ))}

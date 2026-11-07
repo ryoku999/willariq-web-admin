@@ -1,3 +1,4 @@
+import { enumLabel, localizeEnumFields } from "@/shared/utils/enum-labels";
 import { roleBase } from "@/shared/utils/operations-path";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -81,7 +82,7 @@ export function MonitoringPage() {
                     <tr key={x.id}>
                       <td>{formatDate(x.createdAt)}</td>
                       <td>{x.id}</td>
-                      <td>{x.status}</td>
+                      <td>{enumLabel(x.status, "job")}</td>
                       <td>
                         {x.incidentId && (
                           <Link
@@ -123,7 +124,9 @@ export function MonitoringPage() {
               >
                 <option value="">Todos</option>
                 {["PENDING", "PROCESSING", "PUBLISHED", "DEAD"].map((x) => (
-                  <option key={x}>{x}</option>
+                  <option key={x} value={x}>
+                    {enumLabel(x)}
+                  </option>
                 ))}
               </select>
             </Field>
@@ -145,9 +148,9 @@ export function MonitoringPage() {
                   {data.items.map((x) => (
                     <tr key={x.id}>
                       <td>{x.aggregateId}</td>
-                      <td>{x.status}</td>
+                      <td>{enumLabel(x.status, "job")}</td>
                       <td>{x.attempts}</td>
-                      <td>{x.lastError ?? "—"}</td>
+                      <td>{enumLabel(x.lastError)}</td>
                       <td>
                         {x.status === "DEAD" && (
                           <button
@@ -174,9 +177,10 @@ export function MonitoringPage() {
             {(job) => (
               <>
                 <p>
-                  {job.status} · {job.finalModel ?? "Sin modelo final"}
+                  {enumLabel(job.status, "job")} ·{" "}
+                  {job.finalModel ?? "Sin modelo final"}
                 </p>
-                {job.errorSummary && <p>{job.errorSummary}</p>}
+                {job.errorSummary && <p>{enumLabel(job.errorSummary)}</p>}
                 <PanelTable
                   headers={[
                     "Proveedor",
@@ -190,8 +194,8 @@ export function MonitoringPage() {
                     <tr key={x.id}>
                       <td>{x.provider}</td>
                       <td>{x.model}</td>
-                      <td>{x.status}</td>
-                      <td>{x.errorCode ?? "—"}</td>
+                      <td>{enumLabel(x.status, "job")}</td>
+                      <td>{enumLabel(x.errorCode)}</td>
                       <td>{x.latencyMs ?? "—"}</td>
                     </tr>
                   ))}
@@ -275,9 +279,9 @@ export function AuditPage() {
               {data.items.map((x) => (
                 <tr key={x.id}>
                   <td>{formatDate(x.createdAt)}</td>
-                  <td>{x.action}</td>
+                  <td>{enumLabel(x.action)}</td>
                   <td>
-                    {x.entityType} · {x.entityId}
+                    {enumLabel(x.entityType)} · {x.entityId}
                   </td>
                   <td>{x.userId ?? "Sistema"}</td>
                   <td>
@@ -301,11 +305,14 @@ export function AuditPage() {
             {(x) => (
               <>
                 <p>
-                  {x.action} · {formatDate(x.createdAt)}
+                  {enumLabel(x.action)} · {formatDate(x.createdAt)}
                 </p>
                 <pre className="max-h-96 overflow-auto rounded bg-base-200 p-3">
                   {JSON.stringify(
-                    { anterior: x.oldValue, actual: x.newValue },
+                    localizeEnumFields({
+                      anterior: x.oldValue,
+                      actual: x.newValue,
+                    }),
                     null,
                     2,
                   )}

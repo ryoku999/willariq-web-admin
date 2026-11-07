@@ -1,3 +1,4 @@
+import { enumLabel } from "@/shared/utils/enum-labels";
 import { roleBase } from "@/shared/utils/operations-path";
 import { lazy, Suspense, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -210,7 +211,9 @@ function WorkflowDialog({
                   >
                     <option value="">Seleccionar</option>
                     {options.map((item) => (
-                      <option key={item}>{item}</option>
+                      <option key={item} value={item}>
+                        {enumLabel(item)}
+                      </option>
                     ))}
                   </select>
                 </Field>
@@ -407,7 +410,7 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
   return (
     <PanelPage
       title={incident.trackingCode}
-      description={`${incident.status} · versión ${incident.version}`}
+      description={`${enumLabel(incident.status)} · versión ${incident.version}`}
     >
       <Link className="link" to={`${base}/incidents`}>
         Volver a incidencias
@@ -500,7 +503,7 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
                   <tr key={x.id}>
                     <td>{formatDate(x.createdAt)}</td>
                     <td>
-                      {x.previousStatus ?? "—"} → {x.newStatus}
+                      {enumLabel(x.previousStatus)} → {enumLabel(x.newStatus)}
                     </td>
                     <td>{x.comment ?? "—"}</td>
                   </tr>
@@ -520,7 +523,7 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
                   <tr key={x.id}>
                     <td>{x.areaId}</td>
                     <td>{x.operatorId ?? "Sin responsable"}</td>
-                    <td>{x.status}</td>
+                    <td>{enumLabel(x.status, "assignment")}</td>
                     <td>{x.note ?? "—"}</td>
                   </tr>
                 ))}
@@ -570,7 +573,7 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
                   {data.items.map((x) => (
                     <tr key={x.id}>
                       <td>{x.fileName}</td>
-                      <td>{x.status}</td>
+                      <td>{enumLabel(x.status)}</td>
                       <td>
                         <button
                           className="btn btn-sm"
@@ -607,8 +610,8 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
                 {data.items.map((x) => (
                   <tr key={x.id}>
                     <td>{x.id}</td>
-                    <td>{x.status}</td>
-                    <td>{x.errorSummary ?? "—"}</td>
+                    <td>{enumLabel(x.status, "job")}</td>
+                    <td>{enumLabel(x.errorSummary)}</td>
                   </tr>
                 ))}
               </PanelTable>

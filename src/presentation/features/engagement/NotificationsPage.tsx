@@ -1,3 +1,4 @@
+import { operationalMessage } from "@/shared/utils/enum-labels";
 import { useState } from "react";
 import {
   useEngagementAction,
@@ -60,7 +61,7 @@ export default function NotificationsPage() {
                   <td>{formatDate(x.createdAt)}</td>
                   <td>
                     <strong>{x.title}</strong>
-                    <p>{x.body}</p>
+                    <p>{operationalMessage(x.body)}</p>
                   </td>
                   <td>
                     {x.readAt ? (

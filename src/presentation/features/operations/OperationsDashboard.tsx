@@ -1,3 +1,4 @@
+import { enumLabel } from "@/shared/utils/enum-labels";
 import { useSummary } from "@/infrastructure/hooks/use-operations";
 import {
   PanelPage,
@@ -46,7 +47,7 @@ export default function OperationsDashboard() {
               <PanelTable headers={["Estado", "Incidencias"]}>
                 {data.byStatus.map((item) => (
                   <tr key={item.status}>
-                    <td>{item.status}</td>
+                    <td>{enumLabel(item.status)}</td>
                     <td>{item.count}</td>
                   </tr>
                 ))}
@@ -54,7 +55,11 @@ export default function OperationsDashboard() {
               <PanelTable headers={["Urgencia", "Incidencias"]}>
                 {data.byUrgency.map((item) => (
                   <tr key={item.urgency ?? "none"}>
-                    <td>{item.urgency ?? "Sin clasificar"}</td>
+                    <td>
+                      {item.urgency
+                        ? enumLabel(item.urgency)
+                        : "Sin clasificar"}
+                    </td>
                     <td>{item.count}</td>
                   </tr>
                 ))}

@@ -1,5 +1,5 @@
 import { useUnreadCount } from "@/infrastructure/hooks/use-engagement";
-import { LogOut, Menu, ShieldCheck, X, ChevronDown } from "lucide-react";
+import { LogOut, Menu, X, ChevronDown } from "lucide-react";
 import { useState, type PropsWithChildren } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/infrastructure/storage/auth-storage";
@@ -50,7 +50,8 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
         <div className="mb-10 flex items-center justify-between px-2">
           <div className="flex items-center gap-3">
             <div className="grid size-10 place-items-center rounded-xl bg-primary text-primary-content">
-              <ShieldCheck size={23} />
+              <img src="/logo-v2.jpeg" alt="logo de la app" />
+              {/* <ShieldCheck size={23} /> */}
             </div>
             <span className="text-xl font-bold">Willariq</span>
           </div>
