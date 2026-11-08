@@ -1,7 +1,7 @@
+import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
 import { useLogin } from "@/infrastructure/hooks/use-auth";
 import type { LoginT } from "../schemas/login.schema";
-import { ZodError } from "zod";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { roleBasedRedirection } from "@/shared/utils/role-based-redirection";
@@ -29,13 +29,6 @@ const LoginPage = () => {
       onSuccess: (data) => {
         navigate(roleBasedRedirection(data.role));
       },
-      onError: (err) => {
-        if (err instanceof ZodError) {
-          console.error("zod error", err);
-        } else {
-          console.error("any error", err);
-        }
-      },
     });
   };
 
@@ -54,8 +47,10 @@ const LoginPage = () => {
         {login.isError && (
           <div role="alert" className="alert alert-error mb-6 text-sm">
             <span>
-              No pudimos iniciar sesión. Revisa tus credenciales e inténtalo
-              nuevamente.
+              {isAxiosError(login.error) &&
+              login.error.response?.data?.code === "AUTH_CHANNEL_ROLE_FORBIDDEN"
+                ? "Esta cuenta es ciudadana. Inicia sesión en la app móvil."
+                : "No pudimos iniciar sesión. Revisa tus credenciales e inténtalo nuevamente."}
             </span>
           </div>
         )}
