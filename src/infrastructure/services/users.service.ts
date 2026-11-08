@@ -1,6 +1,7 @@
 import http from "@/config/http/axios";
 import type { UsersRepository } from "@/core/contracts/users.repository";
 import type {
+  CreateUserReq,
   UpdateProfileReq,
   UpdateProfileRes,
   UpdateRoleReq,
@@ -19,6 +20,10 @@ import type { AxiosInstance } from "axios";
 class UsersService implements UsersRepository {
   private readonly http: AxiosInstance = http;
   private readonly prefix = "/users";
+
+  async create(dto: CreateUserReq): Promise<void> {
+    await this.http.post(this.prefix, dto);
+  }
 
   async userProfile(): Promise<UserProfile> {
     const { data } = await this.http.get<ApiEnvelope<UserProfile>>(

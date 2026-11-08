@@ -1,10 +1,10 @@
-import { useUsersList } from "@/infrastructure/hooks/use-users";
+import type { ManagedUserRole } from "@/core/entities/users.entity";
+import { Dialog, Field } from "@/presentation/components/PanelControls";
+import { errorMessage } from "@/shared/utils/panel-format";
+import { useCreateUser, useUsersList } from "@/infrastructure/hooks/use-users";
 import ErrorState from "@/presentation/components/ErrorState";
 import LoadingState from "@/presentation/components/LoadingState";
-import type {
-  UserRole,
-  UserStatus,
-} from "@/shared/interfaces/auth-storage.interface";
+import type { UserStatus } from "@/shared/interfaces/auth-storage.interface";
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,7 +15,8 @@ import {
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-const roleLabels: Record<UserRole, string> = {
+const roleLabels: Record<ManagedUserRole, string> = {
+  CITIZEN: "Ciudadano",
   ADMIN: "Administrador",
   SUPERVISOR: "Supervisor",
   OPERATOR: "Operador",
@@ -26,10 +27,98 @@ const statusLabels: Record<UserStatus, string> = {
   BLOCKED: "Bloqueado",
 };
 
+function CreateUserForm({ onClose }: { onClose: () => void }) {
+  const create = useCreateUser();
+  return (
+    <Dialog title="Crear usuario" onClose={onClose} busy={create.isPending}>
+      <form
+        className="grid gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const data = new FormData(event.currentTarget);
+          const value = (key: string) => String(data.get(key) ?? "");
+          create.mutate(
+            {
+              firstName: value("firstName").trim(),
+              lastName: value("lastName").trim() || undefined,
+              dni: value("dni"),
+              phone: value("phone"),
+              password: value("password"),
+              role: value("role") as ManagedUserRole,
+            },
+            { onSuccess: onClose },
+          );
+        }}
+      >
+        <Field label="Nombres">
+          <input
+            className="input w-full"
+            name="firstName"
+            required
+            maxLength={80}
+          />
+        </Field>
+        <Field label="Apellidos">
+          <input className="input w-full" name="lastName" maxLength={120} />
+        </Field>
+        <Field label="DNI">
+          <input
+            className="input w-full"
+            name="dni"
+            required
+            inputMode="numeric"
+            pattern="[0-9]{8}"
+            maxLength={8}
+          />
+        </Field>
+        <Field label="Teléfono">
+          <input
+            className="input w-full"
+            name="phone"
+            required
+            inputMode="numeric"
+            pattern="[0-9]{9}"
+            maxLength={9}
+          />
+        </Field>
+        <Field label="Contraseña inicial">
+          <input
+            className="input w-full"
+            name="password"
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={8}
+            maxLength={72}
+          />
+        </Field>
+        <Field label="Rol">
+          <select className="select w-full" name="role" defaultValue="CITIZEN">
+            {Object.entries(roleLabels).map(([role, label]) => (
+              <option key={role} value={role}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {create.error && (
+          <p role="alert" className="alert alert-error">
+            {errorMessage(create.error)}
+          </p>
+        )}
+        <button className="btn btn-primary" disabled={create.isPending}>
+          Crear usuario
+        </button>
+      </form>
+    </Dialog>
+  );
+}
+
 const UsersListPage = () => {
+  const [creating, setCreating] = useState(false);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [role, setRole] = useState<UserRole | "">("");
+  const [role, setRole] = useState<ManagedUserRole | "">("");
   const [status, setStatus] = useState<UserStatus | "">("");
   const query = useUsersList({
     page,
@@ -69,11 +158,20 @@ const UsersListPage = () => {
             Gestiona los accesos y consulta el perfil de cada usuario.
           </p>
         </div>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => setCreating(true)}
+        >
+          Crear usuario
+        </button>
         <div className="rounded-2xl bg-primary/10 px-4 py-3 text-sm font-semibold text-primary">
           <UsersRound className="mr-2 inline" size={18} />
           {result.pagination.total} usuarios
         </div>
       </div>
+
+      {creating && <CreateUserForm onClose={() => setCreating(false)} />}
 
       <section className="rounded-3xl border border-base-300 bg-base-100 p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-3 lg:flex-row">
@@ -89,7 +187,7 @@ const UsersListPage = () => {
             className="select select-bordered lg:w-52"
             value={role}
             onChange={(event) =>
-              applyFilter(setRole, event.target.value as UserRole | "")
+              applyFilter(setRole, event.target.value as ManagedUserRole | "")
             }
           >
             <option value="">Todos los roles</option>
@@ -145,7 +243,7 @@ const UsersListPage = () => {
                     <div className="flex items-center gap-3">
                       <div className="grid size-10 place-items-center rounded-xl bg-primary/10 font-bold text-primary">
                         {user.firstName[0]}
-                        {user.lastName[0]}
+                        {user.lastName?.[0]}
                       </div>
                       <div>
                         <p className="font-semibold">
@@ -160,7 +258,7 @@ const UsersListPage = () => {
                   <td>{user.dni}</td>
                   <td>
                     <span className="badge badge-ghost">
-                      {roleLabels[user.role as UserRole] ?? user.role}
+                      {roleLabels[user.role as ManagedUserRole] ?? user.role}
                     </span>
                   </td>
                   <td>

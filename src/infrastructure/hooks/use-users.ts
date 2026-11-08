@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { usersService } from "../services/users.service";
 import type {
+  CreateUserReq,
   UpdateProfileReq,
   UpdateRoleReq,
   UpdateStatusReq,
@@ -81,3 +82,11 @@ export const useUserUpdateRole = () => {
     },
   });
 };
+
+export function useCreateUser() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateUserReq) => usersService.create(dto),
+    onSuccess: () => cache.invalidateQueries({ queryKey: ["users", "list"] }),
+  });
+}

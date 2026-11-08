@@ -67,7 +67,7 @@ const UsersDeatilsPage = () => {
           <div className="flex items-center gap-4">
             <div className="grid size-20 place-items-center rounded-3xl bg-primary-content text-2xl font-bold text-primary">
               {user.firstName[0]}
-              {user.lastName[0]}
+              {user.lastName?.[0]}
             </div>
             <div>
               <h1 className="text-2xl font-bold">

@@ -44,12 +44,7 @@ export const allNavItems: NavGroup[] = [
     role: "ADMIN",
     children: [
       { label: "Dashboard", to: "/", icon: LayoutDashboard, exact: true },
-      {
-        label: "Usuarios",
-        to: "/users",
-        icon: UsersRound,
-        children: [{ label: "Lista de usuarios", to: "/users", exact: true }],
-      },
+      { label: "Usuarios", to: "/users", icon: UsersRound },
       ...operations(""),
       { label: "Configuración IA", to: "/ai/configuration", icon: Settings2 },
       { label: "Trabajos y outbox", to: "/ai/jobs", icon: Activity },

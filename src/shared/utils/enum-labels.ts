@@ -150,6 +150,7 @@ const labels: Readonly<Record<string, string>> = {
   AREA_ACTIVATED: "Área activada",
   AREA_INACTIVATED: "Área desactivada",
   AREA_MEMBER_ADDED: "Miembro agregado al área",
+  USER_CREATED: "Usuario creado",
   AREA_MEMBER_REACTIVATED: "Membresía reactivada",
   AREA_MEMBER_REMOVED: "Membresía retirada",
   USER_ACTIVATED: "Usuario activado",

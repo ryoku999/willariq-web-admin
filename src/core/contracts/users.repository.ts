@@ -1,4 +1,5 @@
 import type {
+  CreateUserReq,
   UpdateProfileReq,
   UpdateProfileRes,
   UpdateRoleReq,
@@ -13,6 +14,7 @@ import type {
 } from "../entities/users.entity";
 
 export interface UsersRepository {
+  create: (dto: CreateUserReq) => Promise<void>;
   userProfile: () => Promise<UserProfile>;
   updateProfile: (dto: UpdateProfileReq) => Promise<UpdateProfileRes>;
   getList: (qry: UsersListQry) => Promise<UsersListRes>;

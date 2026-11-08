@@ -42,11 +42,22 @@ export interface UpdateProfileRes {
 }
 
 // users list query
+export type ManagedUserRole = UserRole | "CITIZEN";
+
+export interface CreateUserReq {
+  firstName: string;
+  lastName?: string;
+  dni: string;
+  phone: string;
+  password: string;
+  role: ManagedUserRole;
+}
+
 export interface UsersListQry {
   page: number;
   limit: number;
   search: string | undefined;
-  role: UserRole | undefined;
+  role: ManagedUserRole | undefined;
   status: UserStatus | undefined;
 }
 
