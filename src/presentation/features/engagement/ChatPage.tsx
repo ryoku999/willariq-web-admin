@@ -17,13 +17,12 @@ import {
 import { errorMessage } from "@/shared/utils/panel-format";
 
 function Conversation({ id }: { id: string }) {
-  const [page, setPage] = useState(1);
   const [content, setContent] = useState("");
   const [trackingCode, setTrackingCode] = useState("");
   const [request, setRequest] = useState<ChatInput | null>(null);
   const [jobId, setJobId] = useState("");
   const session = useChatSession(id);
-  const messages = useChatMessages(id, page);
+  const messages = useChatMessages(id);
   const job = useChatJob(jobId);
   const send = useEngagementAction("send");
   const close = useEngagementAction("close");
@@ -69,40 +68,61 @@ function Conversation({ id }: { id: string }) {
             </div>
           </div>
           <QueryView query={messages}>
-            {(data) => (
-              <>
-                <ol className="grid gap-3">
-                  {[...data.items].reverse().map((x) => (
-                    <li
-                      key={x.id}
-                      className={`rounded-xl border border-base-300 p-4 ${x.role === "USER" ? "bg-primary/10" : "bg-base-100"}`}
+            {({ pages }) => {
+              const newestFirst = pages.flatMap((page) => page.items);
+              const chronological = [
+                ...new Map(
+                  newestFirst.map((message) => [message.id, message]),
+                ).values(),
+              ].reverse();
+              return (
+                <>
+                  {messages.hasNextPage && (
+                    <button
+                      type="button"
+                      className="btn btn-sm w-fit"
+                      disabled={messages.isFetchingNextPage}
+                      onClick={() => void messages.fetchNextPage()}
                     >
-                      <strong>{x.role === "USER" ? "Tú" : "Asistente"}</strong>
-                      <p className="whitespace-pre-wrap break-words">
-                        {x.role === "ASSISTANT"
-                          ? operationalMessage(x.content)
-                          : x.content}
-                      </p>
-                      {!!x.metadata?.sources?.length && (
-                        <ul
-                          className="mt-2 border-t border-base-300 pt-2 text-sm"
-                          aria-label="Fuentes"
-                        >
-                          {x.metadata.sources.map((source) => (
-                            <li key={source.chunkId}>
-                              [{source.ref}] {source.title} ·{" "}
-                              {source.section.join(" › ") || "Documento"} ·
-                              fragmento {source.chunkIndex + 1}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-                <Pager data={data} onPage={setPage} />
-              </>
-            )}
+                      {messages.isFetchingNextPage
+                        ? "Cargando mensajes…"
+                        : "Cargar mensajes anteriores"}
+                    </button>
+                  )}
+                  <ol className="grid gap-3">
+                    {chronological.map((x) => (
+                      <li
+                        key={x.id}
+                        className={`rounded-xl border border-base-300 p-4 ${x.role === "USER" ? "bg-primary/10" : "bg-base-100"}`}
+                      >
+                        <strong>
+                          {x.role === "USER" ? "Tú" : "Asistente"}
+                        </strong>
+                        <p className="whitespace-pre-wrap break-words">
+                          {x.role === "ASSISTANT"
+                            ? operationalMessage(x.content)
+                            : x.content}
+                        </p>
+                        {!!x.metadata?.sources?.length && (
+                          <ul
+                            className="mt-2 border-t border-base-300 pt-2 text-sm"
+                            aria-label="Fuentes"
+                          >
+                            {x.metadata.sources.map((source) => (
+                              <li key={source.chunkId}>
+                                [{source.ref}] {source.title} ·{" "}
+                                {source.section.join(" › ") || "Documento"} ·
+                                fragmento {source.chunkIndex + 1}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </>
+              );
+            }}
           </QueryView>
           {jobId && (
             <p className="text-sm" aria-live="polite">
@@ -147,7 +167,6 @@ function Conversation({ id }: { id: string }) {
                 send.mutate([id, payload], {
                   onSuccess: (value) => {
                     setJobId(value.job.id);
-                    setPage(1);
                     setContent("");
                     setTrackingCode("");
                   },

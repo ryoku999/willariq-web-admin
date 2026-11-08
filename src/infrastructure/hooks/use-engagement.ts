@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { EngagementRepository } from "@/core/contracts/engagement.repository";
 import { engagementService as api } from "../services/engagement.service";
 
@@ -24,10 +29,14 @@ export const useChatSession = (id: string) =>
     queryFn: () => api.session(id),
     enabled: !!id,
   });
-export const useChatMessages = (id: string, page: number) =>
-  useQuery({
-    queryKey: ["chat", id, "messages", page],
-    queryFn: () => api.messages(id, { page, limit: 20 }),
+export const useChatMessages = (id: string) =>
+  useInfiniteQuery({
+    queryKey: ["chat", id, "messages"],
+    queryFn: ({ pageParam }) =>
+      api.messages(id, { page: pageParam, limit: 20 }),
+    initialPageParam: 1,
+    getNextPageParam: ({ pagination }) =>
+      pagination.page < pagination.pages ? pagination.page + 1 : undefined,
     enabled: !!id,
   });
 export const useChatJob = (id: string) =>
