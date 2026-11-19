@@ -1,11 +1,7 @@
-import { Outlet } from "react-router-dom";
+import DashboardLayout from "./DashboardLayout";
 
 const OperatorLayout = () => {
-  return (
-    <>
-      <Outlet />
-    </>
-  );
+  return <DashboardLayout role="OPERATOR" />;
 };
 
 export default OperatorLayout;

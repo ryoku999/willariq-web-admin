@@ -3,10 +3,10 @@ import type { PropsWithChildren } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
 const AuthGuard = ({ children }: PropsWithChildren) => {
-  const { isAuthenticated, user } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
   const location = useLocation();
 
-  if (!isAuthenticated || !user) {
+  if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

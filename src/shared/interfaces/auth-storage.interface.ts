@@ -1,6 +1,11 @@
 export type UserRole = "ADMIN" | "SUPERVISOR" | "OPERATOR";
+export const UserStatus = {
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+  BLOCKED: "BLOCKED",
+} as const;
 
-export const AUTH_STORE_NAME = "willariq-admin";
+export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
 
 export interface AuthUser {
   name: string;
@@ -10,7 +15,6 @@ export interface AuthUser {
 
 export interface AuthStore {
   user: AuthUser | null;
-  isAuthenticated: boolean;
   setUser: (user: AuthUser) => void;
-  deleteAuth: () => void;
+  clearSession: () => void;
 }

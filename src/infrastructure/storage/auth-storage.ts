@@ -1,28 +1,18 @@
-import {
-  AUTH_STORE_NAME,
-  type AuthStore,
-  type AuthUser,
+import type {
+  AuthStore,
+  AuthUser,
 } from "@/shared/interfaces/auth-storage.interface";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+
+const AUTH_STORE_NAME = "willariq-admin";
 
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set) => ({
       user: null,
-      isAuthenticated: false,
-      setUser: (user: AuthUser) =>
-        set({
-          user,
-          isAuthenticated: true,
-        }),
-      deleteAuth: () => {
-        set({
-          user: null,
-          isAuthenticated: false,
-        });
-        localStorage.removeItem(AUTH_STORE_NAME);
-      },
+      setUser: (user: AuthUser) => set({ user }),
+      clearSession: () => set({ user: null }),
     }),
     {
       name: AUTH_STORE_NAME,

@@ -1,13 +1,27 @@
 import { createBrowserRouter } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
 import {
+  AreasPage,
+  AuditPage,
+  AiConfigurationPage,
+  ChatPage,
+  IncidentDetailPage,
+  IncidentsPage,
+  KnowledgePage,
+  MonitoringPage,
+  MyAssignmentsPage,
+  NotificationsPage,
+  PublicAccountPage,
   DashboardPage,
   LoginPage,
   OperatorDashboardPage,
+  ProfilePage,
   SupervisorDashboardPage,
+  UsersDeatilsPage,
+  UsersListPage,
 } from "./lazy-routes";
 import AuthLayout from "../layouts/AuthLayout";
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import LazyLoading from "../components/LazyLoading";
 import AuthGuard from "../guards/AuthGuard";
 import GuestGuard from "../guards/GuestGuard";
@@ -15,9 +29,24 @@ import NotFoundPage from "../components/NotFoundPage";
 import OperatorLayout from "../layouts/OperatorLayout";
 import SupervisorLayout from "../layouts/SupervisorLayout";
 import RoleGuard from "../guards/RoleGuard";
+import ErrorState from "../components/ErrorState";
+
+const screen = (path: string, page: ReactNode) => ({
+  path,
+  element: <Suspense fallback={<LazyLoading />}>{page}</Suspense>,
+});
+
+const operationRoutes = (prefix: string) => [
+  screen(`${prefix}/incidents`, <IncidentsPage />),
+  screen(`${prefix}/incidents/:id`, <IncidentDetailPage />),
+  screen(`${prefix}/municipal-areas`, <AreasPage />),
+  screen(`${prefix}/notifications`, <NotificationsPage />),
+  screen(`${prefix}/assignments`, <MyAssignmentsPage />),
+];
 
 export const routes = createBrowserRouter([
   {
+    errorElement: <ErrorState />,
     element: (
       <AuthGuard>
         <RoleGuard allowedRoles={["ADMIN"]}>
@@ -26,11 +55,42 @@ export const routes = createBrowserRouter([
       </AuthGuard>
     ),
     children: [
+      ...operationRoutes(""),
+      screen("/ai/configuration", <AiConfigurationPage />),
+      screen("/ai/jobs", <MonitoringPage />),
+      screen("/knowledge", <KnowledgePage />),
+      screen("/audit", <AuditPage />),
+      screen("/chat", <ChatPage />),
       {
-        path: "/admin",
+        path: "/",
         element: (
           <Suspense fallback={<LazyLoading />}>
-            <DashboardPage />,
+            <DashboardPage />
+          </Suspense>
+        ),
+      },
+
+      {
+        path: "/profile",
+        element: (
+          <Suspense fallback={<LazyLoading />}>
+            <ProfilePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "/users",
+        element: (
+          <Suspense fallback={<LazyLoading />}>
+            <UsersListPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "/users/:userId/details",
+        element: (
+          <Suspense fallback={<LazyLoading />}>
+            <UsersDeatilsPage />
           </Suspense>
         ),
       },
@@ -45,11 +105,22 @@ export const routes = createBrowserRouter([
       </AuthGuard>
     ),
     children: [
+      ...operationRoutes("/operator"),
+
       {
         path: "/operator",
         element: (
           <Suspense fallback={<LazyLoading />}>
             <OperatorDashboardPage />
+          </Suspense>
+        ),
+      },
+
+      {
+        path: "/operator/profile",
+        element: (
+          <Suspense fallback={<LazyLoading />}>
+            <ProfilePage />
           </Suspense>
         ),
       },
@@ -64,11 +135,22 @@ export const routes = createBrowserRouter([
       </AuthGuard>
     ),
     children: [
+      ...operationRoutes("/supervisor"),
+      screen("/supervisor/ai/jobs", <MonitoringPage />),
       {
         path: "/supervisor",
         element: (
           <Suspense fallback={<LazyLoading />}>
             <SupervisorDashboardPage />
+          </Suspense>
+        ),
+      },
+
+      {
+        path: "/supervisor/profile",
+        element: (
+          <Suspense fallback={<LazyLoading />}>
+            <ProfilePage />
           </Suspense>
         ),
       },
@@ -89,6 +171,14 @@ export const routes = createBrowserRouter([
           </Suspense>
         ),
       },
+    ],
+  },
+  {
+    element: <AuthLayout />,
+    children: [
+      screen("/recuperar-contrasena", <PublicAccountPage mode="forgot" />),
+      screen("/restablecer-contrasena", <PublicAccountPage mode="reset" />),
+      screen("/verificar-correo", <PublicAccountPage mode="verify" />),
     ],
   },
   {

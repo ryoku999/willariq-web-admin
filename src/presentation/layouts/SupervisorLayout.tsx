@@ -1,11 +1,7 @@
-import { Outlet } from "react-router-dom";
+import DashboardLayout from "./DashboardLayout";
 
 const SupervisorLayout = () => {
-  return (
-    <>
-      <Outlet />
-    </>
-  );
+  return <DashboardLayout role="SUPERVISOR" />;
 };
 
 export default SupervisorLayout;
