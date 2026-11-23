@@ -1,23 +1,26 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "daisyui": {
       "source": "saadeghi/daisyui",
+      "commit": "43bc54e9ea25a0f26d85392c169dae6b9839d6e5",
       "sourceType": "github",
       "skillPath": "skills/daisyui/SKILL.md",
-      "computedHash": "f70b06883160802b5b04db0504647cc140bd38cf7eb941183a38f44a179b27ca"
+      "computedHash": "4dfba5cd295d5ee38d352fc40649eb89b550975d8951a323e3de7922eac467d2"
     },
     "frontend-design": {
       "source": "anthropics/skills",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
       "sourceType": "github",
       "skillPath": "skills/frontend-design/SKILL.md",
-      "computedHash": "89496d5dd00f4810205f351759594fc2742bf8eea85a2f2b2d1de59f4bd91576"
+      "computedHash": "83485963700bcf11d5bf78118facb301676b69d918fee2e45a95e7f1a2840f6c"
     },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
+      "commit": "5a37a6329fbad3666c3207392a6a7c0110e92efb",
       "sourceType": "github",
       "skillPath": "skills/react-best-practices/SKILL.md",
-      "computedHash": "3219a1944e404ffc14d1d9d6aef6dd2e3855b81387ee0a044ccbfe14d34c2357"
+      "computedHash": "7991ed4fbecdac23f47c1a40c243e00a212a9e7f3604db93959b3ae11dffe299"
     }
   }
 }
