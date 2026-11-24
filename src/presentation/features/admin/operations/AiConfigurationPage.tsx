@@ -1,10 +1,18 @@
 import { ConfirmActionButton } from "@/presentation/components/ConfirmActionButton";
 import { useConfirmAction } from "@/presentation/components/useConfirmAction";
 import EmbeddingProfilesPanel from "./EmbeddingProfilesPanel";
-import { enumLabel, localizeEnumFields } from "@/shared/utils/enum-labels";
+import { enumLabel } from "@/shared/utils/enum-labels";
 import { useState, type FormEvent } from "react";
 import {
-  capabilities,
+  ArrowDown,
+  ArrowUp,
+  ClipboardCheck,
+  Database,
+  MessagesSquare,
+  Plus,
+} from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import {
   providers,
   type AiRoute,
   type Capability,
@@ -24,21 +32,7 @@ import {
   PanelTable,
   QueryView,
 } from "@/presentation/components/PanelControls";
-import { errorMessage, hideTechnicalIds } from "@/shared/utils/panel-format";
-
-const chatSchema = {
-  type: "object",
-  additionalProperties: false,
-  properties: {
-    answer: { type: "string", minLength: 1, maxLength: 4000 },
-    citations: {
-      type: "array",
-      maxItems: 20,
-      items: { type: "integer", minimum: 1 },
-    },
-  },
-  required: ["answer", "citations"],
-};
+import { errorMessage } from "@/shared/utils/panel-format";
 
 function jsonObject(text: string): object {
   const value: unknown = JSON.parse(text);
@@ -57,10 +51,6 @@ function NewPrompt({
   onClose: () => void;
 }) {
   const save = useAdminAction("createPrompt");
-  const contract = useAdminAction("classificationSchema");
-  const [schema, setSchema] = useState(
-    capability === "CHATBOT" ? JSON.stringify(chatSchema, null, 2) : "",
-  );
   const [error, setError] = useState("");
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -74,7 +64,7 @@ function NewPrompt({
             version: Number(form.get("version")),
             capability,
             systemPrompt: field(form, "prompt"),
-            responseSchema: schema.trim() ? jsonObject(schema) : undefined,
+            responseSchema: jsonObject(field(form, "responseSchema")),
           },
         ],
         { onSuccess: onClose },
@@ -118,38 +108,18 @@ function NewPrompt({
             required
           />
         </Field>
-        {capability === "INCIDENT_CLASSIFICATION" && (
-          <button
-            type="button"
-            className="btn btn-sm"
-            disabled={contract.isPending}
-            onClick={() =>
-              contract.mutate([], {
-                onSuccess: (value) =>
-                  setSchema(JSON.stringify(value.responseSchema, null, 2)),
-              })
-            }
-          >
-            Cargar contrato de clasificación
-          </button>
-        )}
         <Field label="JSON Schema de respuesta">
           <textarea
             className="textarea w-full font-mono"
             rows={7}
-            value={schema}
-            onChange={(e) => setSchema(e.target.value)}
-            placeholder={
-              capability === "INCIDENT_CLASSIFICATION"
-                ? "Vacío usa el contrato canónico"
-                : ""
-            }
-            required={capability !== "INCIDENT_CLASSIFICATION"}
+            name="responseSchema"
+            placeholder="Pega el contrato JSON de esta sección"
+            required
           />
         </Field>
-        {(error || save.error || contract.error) && (
+        {(error || save.error) && (
           <p role="alert" className="alert alert-error">
-            {error || errorMessage(save.error ?? contract.error)}
+            {error || errorMessage(save.error)}
           </p>
         )}
         <button className="btn btn-primary" disabled={save.isPending}>
@@ -191,7 +161,9 @@ function PromptDetail({ id, onClose }: { id: string; onClose: () => void }) {
               className="btn"
               disabled={activate.isPending}
               confirmation={{
-                title: prompt.active ? "¿Desactivar el prompt?" : "¿Activar el prompt?",
+                title: prompt.active
+                  ? "¿Desactivar el prompt?"
+                  : "¿Activar el prompt?",
                 description: prompt.active
                   ? "Esta versión dejará de estar activa para la capacidad."
                   : "Esta versión quedará activa para la capacidad.",
@@ -255,7 +227,10 @@ function RouteForm({
   const { confirm, dialog } = useConfirmAction();
   return (
     <Dialog
-      title={route ? "Editar ruta" : "Nueva ruta"}
+      title={
+        (route ? "Editar ruta de " : "Registrar ruta de ") +
+        (capability === "CHATBOT" ? "chatbot" : "incidencias")
+      }
       onClose={onClose}
       busy={busy}
     >
@@ -271,11 +246,13 @@ function RouteForm({
             enabled: f.has("enabled"),
           };
           if (route) {
-            const save = () => edit.mutate([route.id, payload], { onSuccess: onClose });
+            const save = () =>
+              edit.mutate([route.id, payload], { onSuccess: onClose });
             if (route.enabled && !payload.enabled) {
               confirm({
                 title: "¿Desactivar esta ruta?",
-                description: "La ruta dejará de estar disponible para esta capacidad.",
+                description:
+                  "La ruta dejará de estar disponible para esta capacidad.",
                 onAccept: save,
               });
             } else {
@@ -306,7 +283,7 @@ function RouteForm({
                 ))}
               </select>
             </Field>
-            <Field label="Prioridad">
+            <Field label="Prioridad (1 se intenta primero)">
               <input
                 type="number"
                 className="input"
@@ -319,11 +296,12 @@ function RouteForm({
             </Field>
           </>
         )}
-        <Field label="Modelo">
+        <Field label="Identificador del modelo">
           <input
             className="input w-full"
             name="model"
             defaultValue={route?.model}
+            placeholder="proveedor/modelo"
             required
             maxLength={180}
           />
@@ -360,10 +338,53 @@ function RouteForm({
     </Dialog>
   );
 }
-export default function AiConfigurationPage() {
-  const [capability, setCapability] = useState<Capability>(
-    "INCIDENT_CLASSIFICATION",
-  );
+
+const sections = [
+  {
+    id: "incidencias",
+    title: "Clasificación de incidencias",
+    description:
+      "Clasifica los reportes y propone su urgencia, categoría y acción recomendada.",
+    icon: ClipboardCheck,
+    capability: "INCIDENT_CLASSIFICATION",
+  },
+  {
+    id: "chatbot",
+    title: "Chatbot municipal",
+    description:
+      "Genera respuestas a partir de los documentos municipales publicados.",
+    icon: MessagesSquare,
+    capability: "CHATBOT",
+  },
+  {
+    id: "vectores",
+    title: "Vectores de conocimiento",
+    description:
+      "Encuentra los fragmentos de documentos relacionados con cada pregunta.",
+    icon: Database,
+    capability: null,
+  },
+] as const;
+
+type ModelSection = (typeof sections)[0 | 1];
+
+function issueLabel(issue: string) {
+  switch (issue) {
+    case "ACTIVE_PROMPT_REQUIRED":
+      return "Activa una versión de prompt.";
+    case "ACTIVE_PROMPT_SCHEMA_INVALID":
+      return "Revisa el esquema de respuesta del prompt activo.";
+    case "ENABLED_ROUTE_REQUIRED":
+      return "Habilita al menos una ruta de modelo.";
+  }
+  const prefix = "PROVIDER_KEY_MISSING:";
+  return issue.startsWith(prefix)
+    ? "Falta la credencial de " + enumLabel(issue.slice(prefix.length)) + "."
+    : enumLabel(issue);
+}
+
+function ModelConfiguration({ section }: { section: ModelSection }) {
+  const { capability } = section;
   const [page, setPage] = useState(1);
   const [prompt, setPrompt] = useState("");
   const [newPrompt, setNewPrompt] = useState(false);
@@ -373,143 +394,246 @@ export default function AiConfigurationPage() {
   const statuses = useProviders();
   const check = useAdminAction("check");
   const reorder = useAdminAction("reorderRoutes");
+  const diagnostic = check.data?.items.find(
+    (item) => item.capability === capability,
+  );
+
   function move(items: AiRoute[], index: number, direction: number) {
     const ids = items.map((x) => x.id);
     [ids[index], ids[index + direction]] = [ids[index + direction], ids[index]];
     reorder.mutate([capability, ids]);
   }
+
   return (
-    <PanelPage
-      title="Configuración de IA"
-      description="Administra versiones de prompts, modelos y orden de proveedores."
-    >
-      <EmbeddingProfilesPanel />
-      <div className="flex flex-wrap items-end gap-3">
-        <Field label="Capacidad">
-          <select
-            className="select"
-            value={capability}
-            onChange={(e) => {
-              setCapability(e.target.value as Capability);
-              setPage(1);
-              check.reset();
-              reorder.reset();
-            }}
+    <div className="space-y-5">
+      <section className="space-y-4 rounded-2xl border border-base-300 bg-base-100 p-4 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold">Rutas y modelos</h2>
+            <p className="mt-1 text-sm text-base-content/70">
+              Las rutas habilitadas se prueban en orden, empezando por el número
+              de prioridad más bajo.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => setRoute("new")}
           >
-            {capabilities.map((x) => (
-              <option key={x} value={x}>
-                {enumLabel(x)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <button
-          className="btn"
-          disabled={check.isPending}
-          onClick={() => check.mutate([capability])}
-        >
-          Comprobar configuración
-        </button>
-      </div>
-      <QueryView query={statuses}>
-        {(data) => (
-          <div className="flex flex-wrap gap-3">
-            {data.items.map((x) => (
-              <span className="badge" key={x.provider}>
-                {x.provider} ·{" "}
-                {x.credentialConfigured
-                  ? "Credencial configurada"
-                  : "Sin credencial"}
-              </span>
-            ))}
+            <Plus size={16} aria-hidden="true" /> Registrar ruta
+          </button>
+        </div>
+        {reorder.error && (
+          <p className="alert alert-error" role="alert">
+            {errorMessage(reorder.error)}
+          </p>
+        )}
+        <QueryView query={routes}>
+          {(data) =>
+            data.items.length ? (
+              <ul
+                aria-label="Rutas registradas"
+                className="divide-y divide-base-300 rounded-xl border border-base-300"
+              >
+                {data.items.map((item, index) => (
+                  <li
+                    key={item.id}
+                    className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
+                  >
+                    <div className="min-w-0">
+                      <div className="mb-1 text-xs text-base-content/70">
+                        Prioridad {item.priority}
+                      </div>
+                      <div className="font-medium [overflow-wrap:anywhere]">
+                        {item.model}
+                      </div>
+                      <div className="mt-1 text-xs text-base-content/70">
+                        {enumLabel(item.provider)} · {item.timeoutMs / 1000} s
+                        de espera
+                      </div>
+                    </div>
+                    <div>
+                      <span
+                        className={
+                          item.enabled
+                            ? "badge badge-success badge-soft"
+                            : "badge badge-ghost"
+                        }
+                      >
+                        {item.enabled ? "Habilitada" : "Deshabilitada"}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <button
+                          type="button"
+                          className="btn btn-sm"
+                          onClick={() => setRoute(item)}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-square btn-ghost btn-sm"
+                          disabled={reorder.isPending || index === 0}
+                          onClick={() => move(data.items, index, -1)}
+                          aria-label={"Subir prioridad de " + item.model}
+                        >
+                          <ArrowUp size={16} aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-square btn-ghost btn-sm"
+                          disabled={
+                            reorder.isPending || index === data.items.length - 1
+                          }
+                          onClick={() => move(data.items, index, 1)}
+                          aria-label={"Bajar prioridad de " + item.model}
+                        >
+                          <ArrowDown size={16} aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="rounded-xl border border-dashed border-base-300 p-5 text-sm text-base-content/70">
+                Todavía no hay rutas. Registra un proveedor y el identificador
+                de su modelo.
+              </p>
+            )
+          }
+        </QueryView>
+      </section>
+
+      <section className="space-y-4 rounded-2xl border border-base-300 bg-base-100 p-4 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold">Instrucciones del modelo</h2>
+            <p className="mt-1 text-sm text-base-content/70">
+              Activa una versión del prompt antes de habilitar una ruta.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-outline btn-sm"
+            onClick={() => setNewPrompt(true)}
+          >
+            <Plus size={16} aria-hidden="true" /> Nuevo prompt
+          </button>
+        </div>
+        <QueryView query={prompts}>
+          {(data) =>
+            data.items.length ? (
+              <>
+                <PanelTable headers={["Nombre", "Versión", "Estado", "Acción"]}>
+                  {data.items.map((item) => (
+                    <tr key={item.id}>
+                      <td className="font-medium [overflow-wrap:anywhere]">
+                        {item.name}
+                      </td>
+                      <td>v{item.version}</td>
+                      <td>
+                        <span
+                          className={
+                            item.active
+                              ? "badge badge-success badge-soft"
+                              : "badge badge-ghost"
+                          }
+                        >
+                          {item.active ? "Activo" : "Inactivo"}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn btn-sm"
+                          onClick={() => setPrompt(item.id)}
+                        >
+                          Ver detalle
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </PanelTable>
+                <Pager data={data} onPage={setPage} />
+              </>
+            ) : (
+              <p className="rounded-xl border border-dashed border-base-300 p-5 text-sm text-base-content/70">
+                Todavía no hay versiones. Crea un prompt y actívalo desde su
+                detalle.
+              </p>
+            )
+          }
+        </QueryView>
+      </section>
+
+      <section className="space-y-4 rounded-2xl border border-base-300 bg-base-100 p-4 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold">Diagnóstico</h2>
+            <p className="mt-1 text-sm text-base-content/70">
+              Revisa credenciales, rutas habilitadas y el prompt activo.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={check.isPending}
+            onClick={() => check.mutate([capability])}
+          >
+            {check.isPending ? "Comprobando…" : "Comprobar configuración"}
+          </button>
+        </div>
+        <QueryView query={statuses}>
+          {(data) => (
+            <ul className="flex flex-wrap gap-2">
+              {data.items.map((item) => (
+                <li
+                  className="badge badge-ghost h-auto whitespace-normal py-1"
+                  key={item.provider}
+                >
+                  {enumLabel(item.provider)} ·{" "}
+                  {item.credentialConfigured
+                    ? "Credencial configurada"
+                    : "Sin credencial"}
+                </li>
+              ))}
+            </ul>
+          )}
+        </QueryView>
+        {check.error && (
+          <p className="alert alert-error" role="alert">
+            {errorMessage(check.error)}
+          </p>
+        )}
+        {diagnostic && (
+          <div
+            className={
+              diagnostic.configurationReady
+                ? "alert alert-success alert-soft"
+                : "alert alert-warning alert-soft"
+            }
+            role="status"
+          >
+            <div>
+              <p className="font-semibold">
+                {diagnostic.configurationReady
+                  ? "Configuración completa"
+                  : "Falta completar la configuración"}
+              </p>
+              {diagnostic.issues.length > 0 && (
+                <ul className="ml-4 list-disc">
+                  {diagnostic.issues.map((issue) => (
+                    <li key={issue}>{issueLabel(issue)}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         )}
-      </QueryView>
-      {(check.error || reorder.error) && (
-        <p className="alert alert-error" role="alert">
-          {errorMessage(check.error ?? reorder.error)}
-        </p>
-      )}
-      {check.data !== undefined && (
-        <pre className="overflow-auto rounded bg-base-100 p-3">
-          {hideTechnicalIds(JSON.stringify(localizeEnumFields(check.data), null, 2))}
-        </pre>
-      )}
-      <div className="flex justify-between">
-        <h2 className="text-xl font-bold">Prompts</h2>
-        <button className="btn btn-primary" onClick={() => setNewPrompt(true)}>
-          Nuevo prompt
-        </button>
-      </div>
-      <QueryView query={prompts}>
-        {(data) => (
-          <>
-            <PanelTable headers={["Nombre", "Versión", "Estado", "Acción"]}>
-              {data.items.map((x) => (
-                <tr key={x.id}>
-                  <td>{x.name}</td>
-                  <td>{x.version}</td>
-                  <td>{x.active ? "Activo" : "Inactivo"}</td>
-                  <td>
-                    <button
-                      className="btn btn-sm"
-                      onClick={() => setPrompt(x.id)}
-                    >
-                      Ver detalle
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </PanelTable>
-            <Pager data={data} onPage={setPage} />
-          </>
-        )}
-      </QueryView>
-      <div className="flex justify-between">
-        <h2 className="text-xl font-bold">Rutas</h2>
-        <button className="btn btn-primary" onClick={() => setRoute("new")}>
-          Nueva ruta
-        </button>
-      </div>
-      <QueryView query={routes}>
-        {(data) => (
-          <PanelTable
-            headers={["Prioridad", "Proveedor", "Modelo", "Estado", "Acciones"]}
-          >
-            {data.items.map((x, index) => (
-              <tr key={x.id}>
-                <td>{x.priority}</td>
-                <td>{x.provider}</td>
-                <td>{x.model}</td>
-                <td>{x.enabled ? "Habilitada" : "Deshabilitada"}</td>
-                <td className="space-x-1">
-                  <button className="btn btn-sm" onClick={() => setRoute(x)}>
-                    Editar
-                  </button>
-                  <button
-                    className="btn btn-sm"
-                    disabled={reorder.isPending || index === 0}
-                    onClick={() => move(data.items, index, -1)}
-                    aria-label={`Subir prioridad de ${x.model}`}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    className="btn btn-sm"
-                    disabled={
-                      reorder.isPending || index === data.items.length - 1
-                    }
-                    onClick={() => move(data.items, index, 1)}
-                    aria-label={`Bajar prioridad de ${x.model}`}
-                  >
-                    ↓
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </PanelTable>
-        )}
-      </QueryView>
+      </section>
       {newPrompt && (
         <NewPrompt
           capability={capability}
@@ -523,6 +647,65 @@ export default function AiConfigurationPage() {
           route={route === "new" ? undefined : route}
           onClose={() => setRoute(null)}
         />
+      )}
+    </div>
+  );
+}
+
+export default function AiConfigurationPage() {
+  const [params, setParams] = useSearchParams();
+  const section =
+    sections.find((item) => item.id === params.get("seccion")) ?? sections[0];
+  return (
+    <PanelPage
+      title="Configuración de IA"
+      description="Elige la función que quieres configurar."
+    >
+      <nav aria-label="Funciones de IA" className="grid gap-3 sm:grid-cols-3">
+        {sections.map((item) => {
+          const Icon = item.icon;
+          const selected = section.id === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => {
+                const next = new URLSearchParams(params);
+                next.set("seccion", item.id);
+                setParams(next, { preventScrollReset: true });
+              }}
+              className={
+                "flex items-start gap-3 rounded-2xl border p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary " +
+                (selected
+                  ? "border-primary bg-primary/8"
+                  : "border-base-300 bg-base-100 hover:border-primary/50")
+              }
+            >
+              <span
+                className={
+                  "rounded-xl p-2.5 " +
+                  (selected
+                    ? "bg-primary text-primary-content"
+                    : "bg-base-200 text-base-content")
+                }
+              >
+                <Icon size={20} aria-hidden="true" />
+              </span>
+              <span className="min-w-0">
+                <span className="block font-semibold">{item.title}</span>
+                <span className="mt-1 block text-sm text-base-content/70">
+                  {item.description}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </nav>
+      {section.capability ? (
+        <ModelConfiguration key={section.id} section={section} />
+      ) : (
+        <EmbeddingProfilesPanel />
       )}
     </PanelPage>
   );
