@@ -12,34 +12,21 @@ export const useSummary = () =>
     queryKey: ["operations", "summary"],
     queryFn: api.summary,
     staleTime: 15000,
+    refetchInterval: 30000,
   });
 export const useIncidents = (query: IncidentQuery) =>
   useQuery({
     queryKey: ["operations", "incidents", query],
     queryFn: () => api.incidents(query),
+    refetchInterval: 30000,
   });
 export const useIncident = (id: string) =>
   useQuery({
     queryKey: ["operations", id, "detail"],
     queryFn: () => api.detail(id),
+    refetchInterval: 30000,
     enabled: !!id,
   });
-export const useMyAssignments = (query: PageQuery) =>
-  useQuery({
-    queryKey: ["operations", "mine", query],
-    queryFn: () => api.mine(query),
-  });
-export function useAssignmentsForIncident(
-  id: string,
-  query: PageQuery,
-  enabled = true,
-) {
-  return useQuery({
-    queryKey: ["operations", id, "assignments", query],
-    queryFn: () => api.assignments(id, query),
-    enabled: !!id && enabled,
-  });
-}
 export function useIncidentJobs(id: string, query: PageQuery, enabled = true) {
   return useQuery({
     queryKey: ["operations", id, "jobs", query],
@@ -56,7 +43,7 @@ export function useIncidentJobs(id: string, query: PageQuery, enabled = true) {
 export function useIncidentRecords(
   id: string,
   query: PageQuery,
-  tab: "history" | "assignments" | "evidence" | "jobs",
+  tab: "history" | "evidence" | "jobs",
 ) {
   return {
     history: useQuery({
@@ -64,7 +51,6 @@ export function useIncidentRecords(
       queryFn: () => api.history(id, query),
       enabled: !!id && tab === "history",
     }),
-    assignments: useAssignmentsForIncident(id, query, tab === "assignments"),
     evidence: useQuery({
       queryKey: ["operations", id, "evidence", query],
       queryFn: () => api.evidence(id, query),
@@ -80,22 +66,15 @@ export function useOperationMutation() {
       operation:
         | { type: "incident"; args: Parameters<OperationsRepository["action"]> }
         | {
-            type: "assignment";
-            args: Parameters<OperationsRepository["assignmentAction"]>;
-          }
-        | {
             type: "evidence";
             args: Parameters<OperationsRepository["uploadEvidence"]>;
           },
     ) => {
       if (operation.type === "incident") return api.action(...operation.args);
-      if (operation.type === "assignment")
-        return api.assignmentAction(...operation.args);
       return api.uploadEvidence(...operation.args);
     },
     onSuccess: (_data, operation) => {
       if (operation.type === "evidence") toast.success("Evidencia adjuntada.");
-      else if (operation.type === "assignment") toast.success("Asignación actualizada.");
       else toast.success("Incidencia actualizada.");
     },
     onSettled: () =>

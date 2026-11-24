@@ -4,11 +4,8 @@ import { roleBase } from "@/shared/utils/operations-path";
 import { lazy, Suspense, useState } from "react";
 import { Link } from "react-router-dom";
 import { statuses, urgencies } from "@/core/entities/operations.entity";
-import {
-  useIncidents,
-  useMyAssignments,
-} from "@/infrastructure/hooks/use-operations";
-import { useAreas } from "@/infrastructure/hooks/use-municipal-areas";
+import { useIncidents } from "@/infrastructure/hooks/use-operations";
+import { useUserProfile } from "@/infrastructure/hooks/use-users";
 import { useAuthStore } from "@/infrastructure/storage/auth-storage";
 import {
   Field,
@@ -26,11 +23,12 @@ const emptyFilters = {
   code: "",
   status: "",
   urgency: "",
-  area: "",
   supervision: false,
+  mine: false,
 };
 
 export default function IncidentsPage() {
+  const profile = useUserProfile();
   const base = roleBase(useAuthStore((s) => s.user?.role));
   const [page, setPage] = useState(1);
   const [draft, setDraft] = useState(emptyFilters);
@@ -42,17 +40,49 @@ export default function IncidentsPage() {
     status: filters.status || undefined,
     urgency: filters.urgency || undefined,
     trackingCode: filters.code || undefined,
-    areaId: filters.area || undefined,
     requiresSupervision: filters.supervision || undefined,
+    responsibleId: filters.mine ? profile.data?.id : undefined,
   });
   const activeCount = Object.values(filters).filter(Boolean).length;
   const hasFilters = activeCount > 0 || Object.values(draft).some(Boolean);
-  const areas = useAreas(1, undefined, undefined, 100);
   return (
     <PanelPage
       title="Incidencias"
       description="Bandeja y ubicaciones dentro del alcance de tu cuenta."
     >
+      <div
+        className="flex flex-wrap gap-2"
+        aria-label="Accesos rápidos a la bandeja"
+      >
+        {(
+          [
+            ["", "Todas"],
+            ["NEW", "Nuevas"],
+            ["ACCEPTED", "Aceptadas"],
+            ["IN_PROGRESS", "En atención"],
+            ["CLOSED", "Cerradas"],
+            ["CANCELLED", "Canceladas"],
+          ] as const
+        ).map(([status, label]) => (
+          <button
+            key={status}
+            type="button"
+            aria-pressed={filters.status === status}
+            className={
+              filters.status === status
+                ? "btn btn-sm btn-primary"
+                : "btn btn-sm"
+            }
+            onClick={() => {
+              setDraft({ ...filters, status });
+              setFilters({ ...filters, status });
+              setPage(1);
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <form
         className="space-y-4 rounded-2xl border border-base-300 bg-base-100 p-4 sm:p-5"
         aria-label="Filtros de incidencias"
@@ -82,22 +112,6 @@ export default function IncidentsPage() {
                 setDraft({ ...draft, code: event.target.value })
               }
             />
-          </Field>
-          <Field label="Área municipal">
-            <select
-              className="select w-full"
-              value={draft.area}
-              onChange={(event) =>
-                setDraft({ ...draft, area: event.target.value })
-              }
-            >
-              <option value="">Todas las áreas</option>
-              {areas.data?.items.map((area) => (
-                <option key={area.id} value={area.id}>
-                  {area.name}
-                </option>
-              ))}
-            </select>
           </Field>
           <Field label="Estado">
             <select
@@ -143,6 +157,18 @@ export default function IncidentsPage() {
               }
             />
             Solo incidencias que requieren supervisión
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="checkbox checkbox-sm"
+              checked={draft.mine}
+              disabled={!profile.data}
+              onChange={(event) =>
+                setDraft({ ...draft, mine: event.target.checked })
+              }
+            />
+            Solo a mi cargo
           </label>
           <div className="flex gap-2">
             <button
@@ -218,40 +244,6 @@ export default function IncidentsPage() {
                   </td>
                   <td>{row.address ?? "—"}</td>
                   <td>{formatDate(row.createdAt)}</td>
-                </tr>
-              ))}
-            </PanelTable>
-            <Pager data={data} onPage={setPage} />
-          </>
-        )}
-      </QueryView>
-    </PanelPage>
-  );
-}
-
-export function MyAssignmentsPage() {
-  const base = roleBase(useAuthStore((s) => s.user?.role));
-  const [page, setPage] = useState(1);
-  const query = useMyAssignments({ page, limit: 20 });
-  return (
-    <PanelPage title="Mis asignaciones">
-      <QueryView query={query}>
-        {(data) => (
-          <>
-            <PanelTable headers={["Incidencia", "Área", "Estado", "Nota"]}>
-              {data.items.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    <Link
-                      className="link link-primary"
-                      to={`${base}/incidents/${row.incidentId}`}
-                    >
-                      {row.incident?.trackingCode ?? "Ver incidencia"}
-                    </Link>
-                  </td>
-                  <td>{row.area?.name ?? "Área no disponible"}</td>
-                  <td>{enumLabel(row.status, "assignment")}</td>
-                  <td>{row.note ?? "—"}</td>
                 </tr>
               ))}
             </PanelTable>

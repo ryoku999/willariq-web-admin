@@ -1,4 +1,4 @@
-export type UserRole = "ADMIN" | "SUPERVISOR" | "OPERATOR";
+export type UserRole = "ADMIN" | "OPERATOR";
 export const UserStatus = {
   ACTIVE: "ACTIVE",
   INACTIVE: "INACTIVE",

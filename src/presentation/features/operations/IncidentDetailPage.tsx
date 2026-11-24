@@ -16,23 +16,15 @@ import {
   sentiments,
   types,
   urgencies,
-  type Assignment,
-  type IncidentAction,
   type IncidentDetail,
 } from "@/core/entities/operations.entity";
 import {
-  useAssignmentsForIncident,
   useIncidentJobs,
   useIncident,
   useIncidentRecords,
   useOperationMutation,
-  useSummary,
 } from "@/infrastructure/hooks/use-operations";
-import {
-  useAreas,
-  useAreaMembers,
-} from "@/infrastructure/hooks/use-municipal-areas";
-import { useUserProfile } from "@/infrastructure/hooks/use-users";
+import { useUserProfile, useUsersList } from "@/infrastructure/hooks/use-users";
 import { useAuthStore } from "@/infrastructure/storage/auth-storage";
 import {
   Dialog,
@@ -51,65 +43,48 @@ const IncidentMap = lazy(() => import("./IncidentMap"));
 const labels = {
   review: "Guardar revisión",
   accept: "Aceptar incidencia",
-  reject: "Rechazar incidencia",
-  assignments: "Asignar",
-  reassignments: "Reasignar",
   start: "Iniciar atención",
-  resolve: "Resolver",
+  transfer: "Cambiar responsable",
   close: "Cerrar incidencia",
   cancel: "Cancelar incidencia",
   "ai/retry": "Reintentar IA",
-  "assignment-accept": "Aceptar asignación",
-  "assignment-cancel": "Cancelar asignación",
 } as const;
 type Action = keyof typeof labels;
-const activeStatuses = ["ASSIGNED", "ACCEPTED", "IN_PROGRESS"];
 
 function WorkflowDialog({
   action,
   incident,
-  assignment,
-  managerOnly,
   onClose,
 }: {
   action: Action;
   incident: IncidentDetail;
-  assignment?: Assignment;
-  managerOnly: boolean;
   onClose: () => void;
 }) {
   const mutation = useOperationMutation();
-  const [area, setArea] = useState(
-    action === "reassignments" ? (assignment?.areaId ?? "") : "",
+  const [staffSearch, setStaffSearch] = useState("");
+  const staff = useUsersList(
+    {
+      page: 1,
+      limit: 100,
+      search: staffSearch.trim() || undefined,
+      role: "OPERATOR",
+      status: "ACTIVE",
+    },
+    action === "transfer",
   );
-  const assigning = action === "assignments" || action === "reassignments";
-  const areas = useAreas(1, undefined, "ACTIVE", 100);
-  const members = useAreaMembers(assigning ? area : "", 1, true, 100);
   const [version] = useState({ expectedVersion: incident.version });
-  const [assignmentVersion] = useState(() =>
-    assignment
-      ? {
-          assignmentId: assignment.id,
-          expectedAssignmentVersion: assignment.version,
-        }
-      : {},
-  );
-  const stale =
-    incident.version !== version.expectedVersion ||
-    assignment?.version !== assignmentVersion.expectedAssignmentVersion;
-  const needsReason = [
-    "review",
-    "reject",
-    "reassignments",
-    "cancel",
-    "assignment-cancel",
-  ].includes(action);
+  const stale = incident.version !== version.expectedVersion;
+  const needsReason = ["review", "transfer", "cancel"].includes(action);
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
     const text = (key: string) => String(fields.get(key) ?? "").trim();
     let body: Record<string, unknown> = { ...version };
     if (needsReason) body.reason = text("reason");
+    if (action === "cancel")
+      body.reason = [text("reasonType"), text("reason")]
+        .filter(Boolean)
+        .join(" · ");
     if (action === "review")
       body = {
         ...body,
@@ -133,47 +108,12 @@ function WorkflowDialog({
           confidence: Number(x.confidence ?? 0),
         })),
       };
-    if (action === "reject") body.rejectionReason = text("rejectionReason");
-    if (assigning)
-      body = {
-        ...body,
-        areaId: area,
-        operatorId: text("operatorId") || undefined,
-        note: text("note") || undefined,
-      };
-    if (
-      [
-        "reassignments",
-        "start",
-        "resolve",
-        "assignment-accept",
-        "assignment-cancel",
-      ].includes(action)
-    )
-      body = { ...body, ...assignmentVersion };
-    if (action === "resolve")
-      body.resolutionSummary = text("resolutionSummary");
-    if (action === "assignment-accept" || action === "assignment-cancel") {
-      if (assignment)
-        mutation.mutate(
-          {
-            type: "assignment",
-            args: [
-              assignment.id,
-              action === "assignment-accept" ? "accept" : "cancel",
-              body,
-            ],
-          },
-          { onSuccess: onClose },
-        );
-    } else
-      mutation.mutate(
-        {
-          type: "incident",
-          args: [incident.id, action as IncidentAction, body],
-        },
-        { onSuccess: onClose },
-      );
+    if (action === "transfer") body.responsibleId = text("responsibleId");
+    if (action === "close") body.resolutionSummary = text("resolutionSummary");
+    mutation.mutate(
+      { type: "incident", args: [incident.id, action, body] },
+      { onSuccess: onClose },
+    );
   }
   return (
     <Dialog
@@ -250,95 +190,64 @@ function WorkflowDialog({
             </label>
           </>
         )}
-        {assigning && (
-          <>
-            <Field label="Área responsable">
-              <select
-                value={area}
-                disabled={managerOnly || areas.isPending}
-                required
-                className="select w-full"
-                onChange={(e) => setArea(e.target.value)}
-              >
-                <option value="">Seleccionar área</option>
-                {areas.data?.items.map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {row.name}
-                  </option>
-                ))}
-                {area && !areas.data?.items.some((row) => row.id === area) && (
-                  <option value={area}>
-                    {assignment?.area?.name ?? "Área actual"}
-                  </option>
-                )}
-              </select>
-            </Field>
-            <Field label="Responsable">
-              <select
-                key={area}
-                className="select w-full"
-                name="operatorId"
-                disabled={!area || members.isPending}
-              >
-                <option value="">Dejar solo en el área</option>
-                {members.data?.items
-                  .filter(
-                    (x) =>
-                      x.user.status === "ACTIVE" &&
-                      ["OPERATOR", "SUPERVISOR"].includes(x.user.role),
-                  )
-                  .map((x) => (
-                    <option key={x.id} value={x.userId}>
-                      {x.user.firstName} {x.user.lastName}
-                    </option>
-                  ))}
-              </select>
-            </Field>
-            {(areas.error || members.error) && (
-              <p role="alert" className="text-error">
-                {errorMessage(areas.error ?? members.error)}
-              </p>
-            )}
-            <Field label="Nota opcional">
-              <textarea
-                className="textarea w-full"
-                name="note"
-                maxLength={1000}
-              />
-            </Field>
-          </>
-        )}
-        {action === "reject" && (
-          <Field label="Motivo de rechazo">
+        {action === "transfer" && (
+          <Field label="Nuevo responsable">
             <input
               className="input w-full"
-              name="rejectionReason"
-              required
-              maxLength={80}
+              placeholder="Buscar por nombre o DNI"
+              value={staffSearch}
+              onChange={(event) => setStaffSearch(event.target.value)}
             />
+            <select name="responsibleId" className="select w-full" required>
+              <option value="">Seleccionar operador</option>
+              {staff.data?.items
+                .filter((operator) => operator.id !== incident.responsibleId)
+                .map((operator) => (
+                  <option key={operator.id} value={operator.id}>
+                    {personName(operator) || operator.dni}
+                  </option>
+                ))}
+            </select>
+            {staff.error && (
+              <span role="alert">{errorMessage(staff.error)}</span>
+            )}
+          </Field>
+        )}
+        {action === "cancel" && (
+          <Field label="Motivo de cancelación">
+            <select name="reasonType" className="select w-full" required>
+              <option value="">Seleccionar motivo</option>
+              <option>Duplicado</option>
+              <option>Spam o reporte falso</option>
+              <option>Fuera de alcance</option>
+              <option>Otro</option>
+            </select>
           </Field>
         )}
         {needsReason && (
-          <Field label="Justificación">
+          <Field
+            label={action === "cancel" ? "Detalle del motivo" : "Justificación"}
+          >
             <textarea
               className="textarea w-full"
               name="reason"
               required
-              maxLength={1000}
+              maxLength={action === "cancel" ? 950 : 1000}
             />
           </Field>
         )}
-        {action === "resolve" && (
+        {action === "close" && (
           <Field label="Resumen de resolución">
             <textarea
               className="textarea w-full"
               name="resolutionSummary"
+              defaultValue={incident.resolutionSummary ?? ""}
               required
               maxLength={5000}
             />
           </Field>
         )}
-        {!needsReason && !assigning && action !== "resolve" && (
+        {!needsReason && action !== "close" && (
           <p>Confirma la acción para {incident.trackingCode}.</p>
         )}
         {stale && (
@@ -353,11 +262,7 @@ function WorkflowDialog({
         )}
         <button
           className="btn btn-primary justify-self-end"
-          disabled={
-            mutation.isPending ||
-            stale ||
-            (assigning && (!area || !!areas.error || !!members.error))
-          }
+          disabled={mutation.isPending || stale}
         >
           {mutation.isPending ? "Guardando…" : labels[action]}
         </button>
@@ -368,54 +273,35 @@ function WorkflowDialog({
 
 function IncidentBody({ incident }: { incident: IncidentDetail }) {
   const user = useAuthStore((s) => s.user);
-  const summary = useSummary();
   const [page, setPage] = useState(1);
-  const [mode, setMode] = useState<
-    "history" | "assignments" | "evidence" | "jobs"
-  >("history");
+  const [mode, setMode] = useState<"history" | "evidence" | "jobs">("history");
   const [action, setAction] = useState<Action | null>(null);
   const [map, setMap] = useState(false);
   const records = useIncidentRecords(incident.id, { page, limit: 20 }, mode);
-  const currentAssignments = useAssignmentsForIncident(incident.id, {
-    page: 1,
-    limit: 20,
-  });
+  const active = ["NEW", "ACCEPTED", "IN_PROGRESS"].includes(incident.status);
   const latestJobs = useIncidentJobs(
     incident.id,
     { page: 1, limit: 20 },
-    incident.status === "IN_REVIEW" || incident.status === "AI_ANALYSIS",
-  );
-  const active = currentAssignments.data?.items.find((row) =>
-    activeStatuses.includes(row.status),
+    active,
   );
   const operation = useOperationMutation();
-  const global = user?.role === "ADMIN" || user?.role === "SUPERVISOR";
-  const manager =
-    !!active &&
-    !!summary.data?.managedAreaIds.includes(active.areaId) &&
-    !incident.requiresSupervision;
+  const admin = user?.role === "ADMIN";
   const profile = useUserProfile();
-  const own = !!profile.data && active?.operatorId === profile.data.id;
+  const own = !!profile.data && incident.responsibleId === profile.data.id;
+  const canManage = admin || own || !incident.responsibleId;
   const actions: Action[] = [];
-  if (global && incident.status === "IN_REVIEW")
-    actions.push("review", "accept", "reject");
-  if (global && incident.status === "ACCEPTED") actions.push("assignments");
-  if (active && (global || manager))
-    actions.push("reassignments", "assignment-cancel");
-  if (own && active?.status === "ASSIGNED") actions.push("assignment-accept");
-  if (own && active?.status === "ACCEPTED") actions.push("start");
-  if (own && active?.status === "IN_PROGRESS") actions.push("resolve");
-  if (global && incident.status === "RESOLVED") actions.push("close");
+  if (active && canManage) actions.push("review");
+  if (incident.status === "NEW") actions.push("accept");
+  if (canManage && incident.status === "ACCEPTED") actions.push("start");
+  if (canManage && ["IN_PROGRESS", "RESOLVED"].includes(incident.status))
+    actions.push("close");
+  if (active && canManage) actions.push("cancel");
+  if (admin && ["ACCEPTED", "IN_PROGRESS"].includes(incident.status))
+    actions.push("transfer");
   if (
-    global &&
-    ["RECEIVED", "AI_ANALYSIS", "IN_REVIEW", "ACCEPTED"].includes(
-      incident.status,
-    )
-  )
-    actions.push("cancel");
-  if (
-    (global || manager) &&
-    incident.status === "IN_REVIEW" &&
+    active &&
+    canManage &&
+    !incident.reviewedAt &&
     latestJobs.data?.items[0]?.status === "FAILED"
   )
     actions.push("ai/retry");
@@ -576,11 +462,35 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
           )}
         </section>
       </div>
-      {currentAssignments.error && (
-        <p className="alert alert-error">
-          {errorMessage(currentAssignments.error)}
+      <section className="rounded-xl border border-base-300 bg-base-100 p-4">
+        <p>
+          <strong>Responsable</strong>{" "}
+          {personName(incident.responsible) || "Sin responsable"}
         </p>
-      )}
+        <dl className="mt-2 flex flex-wrap gap-4 text-sm">
+          {(
+            [
+              ["Envío", incident.submittedAt],
+              ["Aceptación", incident.acceptedAt],
+              ["Inicio", incident.startedAt],
+              ["Cierre", incident.closedAt],
+            ] as const
+          ).map(
+            ([label, date]) =>
+              date && (
+                <div key={label}>
+                  <dt className="font-semibold">{label}</dt>
+                  <dd>{formatDate(date)}</dd>
+                </div>
+              ),
+          )}
+        </dl>
+        {incident.cancellationReason && (
+          <p className="mt-2">
+            <strong>Motivo de cancelación</strong> {incident.cancellationReason}
+          </p>
+        )}
+      </section>
       <div className="flex flex-wrap gap-2">
         {actions.map((x) => (
           <button
@@ -597,22 +507,20 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
         className="flex flex-wrap gap-2"
         aria-label="Registros de la incidencia"
       >
-        {(["history", "assignments", "evidence", "jobs"] as const).map(
-          (x, i) => (
-            <button
-              type="button"
-              key={x}
-              aria-pressed={mode === x}
-              className={`btn btn-sm ${mode === x ? "btn-primary" : ""}`}
-              onClick={() => {
-                setMode(x);
-                setPage(1);
-              }}
-            >
-              {["Historial", "Asignaciones", "Evidencias", "Trabajos IA"][i]}
-            </button>
-          ),
-        )}
+        {(["history", "evidence", "jobs"] as const).map((x, i) => (
+          <button
+            type="button"
+            key={x}
+            aria-pressed={mode === x}
+            className={`btn btn-sm ${mode === x ? "btn-primary" : ""}`}
+            onClick={() => {
+              setMode(x);
+              setPage(1);
+            }}
+          >
+            {["Historial", "Evidencias", "Trabajos IA"][i]}
+          </button>
+        ))}
       </div>
       {mode === "history" && (
         <QueryView query={records.history}>
@@ -626,30 +534,6 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
                       {enumLabel(x.previousStatus)} → {enumLabel(x.newStatus)}
                     </td>
                     <td>{x.comment ?? "—"}</td>
-                  </tr>
-                ))}
-              </PanelTable>
-              <Pager data={data} onPage={setPage} />
-            </>
-          )}
-        </QueryView>
-      )}
-      {mode === "assignments" && (
-        <QueryView query={records.assignments}>
-          {(data) => (
-            <>
-              <PanelTable headers={["Área", "Responsable", "Estado", "Nota"]}>
-                {data.items.map((x) => (
-                  <tr key={x.id}>
-                    <td>{x.area?.name ?? "Área no disponible"}</td>
-                    <td>
-                      {personName(x.operator) ||
-                        (x.operatorId
-                          ? "Responsable no disponible"
-                          : "Sin responsable")}
-                    </td>
-                    <td>{enumLabel(x.status, "assignment")}</td>
-                    <td>{x.note ?? "—"}</td>
                   </tr>
                 ))}
               </PanelTable>
@@ -724,8 +608,6 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
           key={action}
           action={action}
           incident={incident}
-          assignment={active}
-          managerOnly={!global}
           onClose={() => setAction(null)}
         />
       )}

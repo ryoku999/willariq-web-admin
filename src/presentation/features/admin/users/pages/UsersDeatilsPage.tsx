@@ -24,7 +24,6 @@ import { Link, useParams } from "react-router-dom";
 
 const roleLabels: Record<UserRole, string> = {
   ADMIN: "Administrador",
-  SUPERVISOR: "Supervisor",
   OPERATOR: "Operador",
 };
 const statusLabels: Record<UserStatus, string> = {

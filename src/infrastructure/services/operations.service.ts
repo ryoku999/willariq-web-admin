@@ -7,9 +7,6 @@ export const operationsService: OperationsRepository = {
   detail: (id) => apiData("GET", `/incidents/${id}`),
   history: (id, params) =>
     apiData("GET", `/incidents/${id}/history`, { params }),
-  assignments: (id, params) =>
-    apiData("GET", `/incidents/${id}/assignments`, { params }),
-  mine: (params) => apiData("GET", "/assignments/me", { params }),
   evidence: (id, params) =>
     apiData("GET", `/incidents/${id}/evidence`, { params }),
   evidenceContent: (id, evidenceId) =>
@@ -22,6 +19,5 @@ export const operationsService: OperationsRepository = {
   jobs: (id, params) => apiData("GET", `/incidents/${id}/ai-jobs`, { params }),
   action: (id, action, data) =>
     apiData("POST", `/incidents/${id}/${action}`, { data }),
-  assignmentAction: (id, action, data) =>
-    apiData("POST", `/assignments/${id}/${action}`, { data }),
+
 };

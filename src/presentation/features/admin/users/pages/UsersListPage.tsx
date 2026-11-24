@@ -18,7 +18,6 @@ import { Link } from "react-router-dom";
 const roleLabels: Record<ManagedUserRole, string> = {
   CITIZEN: "Ciudadano",
   ADMIN: "Administrador",
-  SUPERVISOR: "Supervisor",
   OPERATOR: "Operador",
 };
 const statusLabels: Record<UserStatus, string> = {

@@ -1,2 +1,1 @@
-export const roleBase = (role?: string) =>
-  role === "ADMIN" ? "" : role === "SUPERVISOR" ? "/supervisor" : "/operator";
+export const roleBase = (role?: string) => role === "OPERATOR" ? "/operator" : "";

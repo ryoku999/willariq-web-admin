@@ -1,5 +1,4 @@
 import type {
-  Assignment,
   DashboardSummary,
   Evidence,
   HistoryEntry,
@@ -17,8 +16,6 @@ export interface OperationsRepository {
   incidents(query: IncidentQuery): Promise<Page<Incident>>;
   detail(id: string): Promise<IncidentDetail>;
   history(id: string, query: PageQuery): Promise<Page<HistoryEntry>>;
-  assignments(id: string, query: PageQuery): Promise<Page<Assignment>>;
-  mine(query: PageQuery): Promise<Page<Assignment>>;
   evidence(id: string, query: PageQuery): Promise<Page<Evidence>>;
   evidenceContent(id: string, evidenceId: string): Promise<Blob>;
   uploadEvidence(id: string, file: File): Promise<unknown>;
@@ -28,9 +25,5 @@ export interface OperationsRepository {
     action: IncidentAction,
     body: Record<string, unknown>,
   ): Promise<unknown>;
-  assignmentAction(
-    id: string,
-    action: "accept" | "cancel",
-    body: Record<string, unknown>,
-  ): Promise<unknown>;
+
 }

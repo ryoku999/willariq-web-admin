@@ -45,11 +45,12 @@ export const useUpdateProfile = () => {
   });
 };
 
-export const useUsersList = (qry: UsersListQry) => {
+export const useUsersList = (qry: UsersListQry, enabled = true) => {
   return useQuery({
     queryKey: ["users", "list", qry],
     queryFn: () => usersService.getList(qry),
     placeholderData: keepPreviousData,
+    enabled,
   });
 };
 

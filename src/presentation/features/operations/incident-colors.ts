@@ -1,17 +1,14 @@
 import { statuses, urgencies } from "@/core/entities/operations.entity";
 
 export const statusColors = {
-  RECEIVED: "#475569",
-  AI_ANALYSIS: "#6d28d9",
-  IN_REVIEW: "#1d4ed8",
+  NEW: "#1d4ed8",
   ACCEPTED: "#0f766e",
-  ASSIGNED: "#4338ca",
   IN_PROGRESS: "#92400e",
   RESOLVED: "#15803d",
   REJECTED: "#9f1239",
   CLOSED: "#334155",
   CANCELLED: "#52525b",
-} satisfies Record<(typeof statuses)[number], string>;
+} satisfies Record<(typeof statuses)[number] | "RESOLVED", string>;
 
 const urgencyColors = {
   LOW: "#3f6212",
