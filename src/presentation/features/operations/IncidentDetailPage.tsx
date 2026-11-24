@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   ClipboardList,
   MapPin,
+  Maximize2,
   MessageSquare,
   Sparkles,
   UserRound,
@@ -30,7 +31,6 @@ import {
   Dialog,
   Field,
   Pager,
-  PanelPage,
   PanelTable,
   QueryView,
 } from "@/presentation/components/PanelControls";
@@ -290,12 +290,11 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
   const own = !!profile.data && incident.responsibleId === profile.data.id;
   const canManage = admin || own || !incident.responsibleId;
   const actions: Action[] = [];
-  if (active && canManage) actions.push("review");
   if (incident.status === "NEW") actions.push("accept");
   if (canManage && incident.status === "ACCEPTED") actions.push("start");
   if (canManage && ["IN_PROGRESS", "RESOLVED"].includes(incident.status))
     actions.push("close");
-  if (active && canManage) actions.push("cancel");
+  if (active && canManage) actions.push("review", "cancel");
   if (admin && ["ACCEPTED", "IN_PROGRESS"].includes(incident.status))
     actions.push("transfer");
   if (
@@ -307,302 +306,566 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
     actions.push("ai/retry");
   const base = roleBase(user?.role);
   const source = incident.classificationSource;
-  const sourceLabel =
-    source === "AI"
-      ? "Generada por IA"
-      : source === "HUMAN"
-        ? "Revisión humana"
-        : "Origen sin registrar";
-  const SourceIcon =
-    source === "AI" ? Sparkles : source === "HUMAN" ? UserRound : ClipboardList;
+  const ai = source === "AI";
+  const SourceIcon = ai
+    ? Sparkles
+    : source === "HUMAN"
+      ? UserRound
+      : ClipboardList;
   const hasClassification = Boolean(
+    incident.type ||
+    incident.category ||
+    incident.urgency ||
     incident.improvedDescription ||
-    incident.recommendedAction ||
-    incident.category,
+    incident.recommendedAction,
   );
+  const sourceLabel = ai
+    ? "Generado por IA"
+    : source === "HUMAN"
+      ? "Revisión humana"
+      : source === "MANUAL_WITHOUT_AI"
+        ? "Revisión manual pendiente"
+        : hasClassification
+          ? "Origen sin registrar"
+          : "Sin clasificar";
+  const jobStatus = latestJobs.data?.items[0]?.status;
+  const analyzing = ["PENDING", "QUEUED", "PROCESSING"].includes(
+    jobStatus ?? "",
+  );
+  const reporter = personName(incident.reporter);
+  const reportedAt = incident.submittedAt ?? incident.createdAt;
+  const hasCoordinates =
+    Number.isFinite(incident.latitude) &&
+    Number.isFinite(incident.longitude) &&
+    Math.abs(incident.latitude) <= 90 &&
+    Math.abs(incident.longitude) <= 180;
+  const coordinates = hasCoordinates
+    ? incident.latitude.toFixed(6) + ", " + incident.longitude.toFixed(6)
+    : null;
+  const milestones = [
+    ["Envío", incident.submittedAt],
+    ["Aceptación", incident.acceptedAt],
+    ["Inicio", incident.startedAt],
+    ["Cierre", incident.closedAt],
+  ] as const;
   return (
-    <PanelPage
-      title={incident.trackingCode}
-      description="Detalle de la incidencia"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link className="btn btn-ghost btn-sm" to={`${base}/incidents`}>
-          <ArrowLeft size={16} aria-hidden="true" />
-          Volver a incidencias
-        </Link>
-        <div className="flex flex-wrap items-center gap-2">
-          <IncidentStatusBadge status={incident.status} />
-          <IncidentUrgencyBadge urgency={incident.urgency} />
-          <span className="text-xs text-base-content/60">
-            Versión {incident.version}
-          </span>
-        </div>
-      </div>
+    <section className="mx-auto max-w-7xl space-y-5 sm:space-y-6">
+      <Link className="btn btn-ghost btn-sm -ml-2" to={base + "/incidents"}>
+        <ArrowLeft size={16} aria-hidden="true" /> Volver a incidencias
+      </Link>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div className="min-w-0 space-y-4">
-          <section className="space-y-3 rounded-2xl border border-base-300 bg-base-100 p-5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="flex items-center gap-2 font-semibold">
-                <MessageSquare size={18} aria-hidden="true" /> Reporte original
+      <header className="rounded-2xl border border-base-300 bg-base-100 p-4 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 space-y-2">
+            <p className="text-sm font-medium text-base-content/65">
+              Detalle de la incidencia
+            </p>
+            <h1 className="text-2xl font-bold tracking-tight [overflow-wrap:anywhere] sm:text-3xl">
+              {incident.trackingCode}
+            </h1>
+            <p className="text-sm text-base-content/70">
+              {incident.submittedAt ? "Enviada" : "Registrada"} el{" "}
+              {formatDate(reportedAt)}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-base-content/70">
+              Estado operativo
+            </span>
+            <IncidentStatusBadge status={incident.status} />
+            {hasCoordinates && (
+              <a
+                className="btn btn-ghost btn-sm gap-1"
+                href="#reported-location"
+              >
+                <MapPin size={16} aria-hidden="true" /> Ver ubicación
+              </a>
+            )}
+          </div>
+        </div>
+        {actions.length > 0 && (
+          <div
+            className="mt-5 grid grid-cols-2 gap-2 border-t border-base-300 pt-4 sm:flex sm:flex-wrap"
+            aria-label="Acciones de la incidencia"
+          >
+            {actions.map((item) => (
+              <button
+                type="button"
+                key={item}
+                className={
+                  "btn max-sm:h-auto max-sm:min-h-10 max-sm:whitespace-normal max-sm:py-2 " +
+                  (["accept", "start", "close"].includes(item)
+                    ? "col-span-2 btn-primary"
+                    : item === "cancel"
+                      ? "btn-outline btn-error"
+                      : "btn-outline")
+                }
+                onClick={() => setAction(item)}
+              >
+                {item === "review" ? "Revisar clasificación" : labels[item]}
+              </button>
+            ))}
+          </div>
+        )}
+      </header>
+
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] xl:grid-rows-[auto_auto_auto]">
+        <section
+          aria-labelledby="citizen-report"
+          className="min-w-0 overflow-hidden rounded-2xl border border-base-300 bg-base-100"
+        >
+          <div className="flex items-center gap-3 border-b border-base-300 bg-base-200/55 p-4 sm:px-6">
+            <span className="rounded-xl bg-base-300/60 p-2.5">
+              <MessageSquare size={20} aria-hidden="true" />
+            </span>
+            <div>
+              <h2 id="citizen-report" className="text-lg font-bold">
+                Reporte del ciudadano
               </h2>
-              <span className="badge badge-outline">Ciudadano</span>
+              <p className="text-sm text-base-content/70">
+                Descripción original
+              </p>
             </div>
-            <p className="whitespace-pre-wrap break-words leading-relaxed">
+          </div>
+          <div className="space-y-4 p-4 sm:p-6">
+            <p className="whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere]">
               {incident.originalMessage}
             </p>
-          </section>
+            {reporter && (
+              <div className="flex items-center gap-3 border-t border-base-300 pt-4 text-sm">
+                <UserRound
+                  size={18}
+                  className="shrink-0 text-base-content/60"
+                  aria-hidden="true"
+                />
+                <div className="min-w-0">
+                  <p className="text-base-content/65">Reportado por</p>
+                  <p className="font-medium [overflow-wrap:anywhere]">
+                    {reporter}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
 
-          <section className="space-y-4 rounded-2xl border border-base-300 bg-base-100 p-5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="flex items-center gap-2 font-semibold">
-                <SourceIcon size={18} aria-hidden="true" /> Clasificación
-              </h2>
-              {hasClassification && (
-                <span
-                  className={`badge ${source === "AI" ? "badge-secondary badge-soft" : source === "HUMAN" ? "badge-info badge-soft" : "badge-outline"}`}
-                >
-                  {sourceLabel}
-                </span>
-              )}
-            </div>
-            {hasClassification ? (
-              <>
-                <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                  <div>
-                    <dt className="text-base-content/60">Tipo</dt>
-                    <dd className="font-medium">{enumLabel(incident.type)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-base-content/60">Categoría</dt>
-                    <dd className="font-medium">
-                      {enumLabel(incident.category)}
-                    </dd>
-                  </div>
-                </dl>
-                {source === "HUMAN" && incident.reviewedAt && (
-                  <p className="text-xs text-base-content/60">
-                    Revisada el {formatDate(incident.reviewedAt)}
+        <section
+          aria-labelledby="classification-analysis"
+          className="min-w-0 overflow-hidden rounded-2xl border border-base-300 bg-base-100 xl:col-start-2 xl:row-span-2 xl:row-start-1"
+        >
+          <div
+            className={
+              ai
+                ? "flex flex-wrap items-center justify-between gap-3 border-b border-secondary/25 bg-secondary/10 p-4 sm:px-6"
+                : "flex flex-wrap items-center justify-between gap-3 border-b border-base-300 bg-base-200/55 p-4 sm:px-6"
+            }
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <span
+                className={
+                  ai
+                    ? "rounded-xl bg-secondary/15 p-2.5 text-secondary"
+                    : "rounded-xl bg-base-300/60 p-2.5"
+                }
+              >
+                <SourceIcon size={20} aria-hidden="true" />
+              </span>
+              <div>
+                <h2 id="classification-analysis" className="text-lg font-bold">
+                  {ai ? "Análisis de IA" : "Clasificación de la incidencia"}
+                </h2>
+                {ai && (
+                  <p className="text-sm text-base-content/70">
+                    Propuesta para revisión municipal
                   </p>
                 )}
+              </div>
+            </div>
+            <span
+              className={
+                ai ? "badge badge-secondary badge-soft" : "badge badge-outline"
+              }
+            >
+              {!hasClassification && analyzing ? "IA analizando" : sourceLabel}
+            </span>
+          </div>
+          <div className="space-y-4 p-4 sm:p-6">
+            {hasClassification ? (
+              <>
+                <dl className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="rounded-xl bg-base-200/65 p-3">
+                    <dt className="mb-1 text-base-content/70">
+                      {ai ? "Gravedad estimada por IA" : "Gravedad"}
+                    </dt>
+                    <dd>
+                      <IncidentUrgencyBadge urgency={incident.urgency} />
+                    </dd>
+                  </div>
+                  <div className="rounded-xl bg-base-200/65 p-3">
+                    <dt className="text-base-content/70">Categoría</dt>
+                    <dd className="mt-1 font-medium [overflow-wrap:anywhere]">
+                      {incident.category
+                        ? enumLabel(incident.category)
+                        : "Sin clasificar"}
+                    </dd>
+                  </div>
+                  <div className="rounded-xl bg-base-200/65 p-3">
+                    <dt className="text-base-content/70">Tipo</dt>
+                    <dd className="mt-1 font-medium [overflow-wrap:anywhere]">
+                      {incident.type
+                        ? enumLabel(incident.type)
+                        : "Sin clasificar"}
+                    </dd>
+                  </div>
+                  {incident.sentiment && (
+                    <div className="rounded-xl bg-base-200/65 p-3">
+                      <dt className="text-base-content/70">Tono del reporte</dt>
+                      <dd className="mt-1 font-medium">
+                        {enumLabel(incident.sentiment)}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                  {incident.requiresSupervision && (
+                    <span className="badge badge-warning badge-soft h-auto py-1">
+                      Requiere supervisión
+                    </span>
+                  )}
+                  {ai && incident.aiConfidence != null && (
+                    <span className="text-base-content/75">
+                      Confianza de la clasificación:{" "}
+                      <strong>
+                        {new Intl.NumberFormat("es-PE", {
+                          style: "percent",
+                          maximumFractionDigits: 1,
+                        }).format(incident.aiConfidence)}
+                      </strong>
+                    </span>
+                  )}
+                  {source === "HUMAN" && incident.reviewedAt && (
+                    <span className="text-base-content/75">
+                      Revisada el {formatDate(incident.reviewedAt)}
+                    </span>
+                  )}
+                </div>
                 {incident.improvedDescription && (
-                  <div className="space-y-1 border-t border-base-300 pt-3">
+                  <div className="space-y-1 border-t border-base-300 pt-4">
                     <h3 className="text-sm font-semibold">
-                      Descripción de la clasificación
+                      {ai
+                        ? "Resumen generado por IA"
+                        : "Descripción de la clasificación"}
                     </h3>
-                    <p className="whitespace-pre-wrap break-words leading-relaxed">
+                    <p className="whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere]">
                       {incident.improvedDescription}
                     </p>
                   </div>
                 )}
                 {incident.recommendedAction && (
-                  <div className="space-y-1 rounded-xl bg-base-200 p-4">
+                  <div
+                    className={
+                      ai
+                        ? "space-y-1 rounded-xl bg-secondary/8 p-4"
+                        : "space-y-1 rounded-xl bg-base-200 p-4"
+                    }
+                  >
                     <h3 className="text-sm font-semibold">
-                      Acción recomendada
+                      {ai ? "Acción sugerida por IA" : "Acción recomendada"}
                     </h3>
-                    <p className="whitespace-pre-wrap break-words leading-relaxed">
+                    <p className="whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere]">
                       {incident.recommendedAction}
                     </p>
                   </div>
                 )}
+                {!!(incident.keywords?.length || incident.entities?.length) && (
+                  <details className="rounded-xl border border-base-300 p-3 text-sm">
+                    <summary className="cursor-pointer font-semibold">
+                      Palabras clave y entidades
+                    </summary>
+                    {!!incident.keywords?.length && (
+                      <ul
+                        aria-label="Palabras clave"
+                        className="mt-3 flex flex-wrap gap-2"
+                      >
+                        {incident.keywords.map((word, index) => (
+                          <li
+                            className="badge badge-ghost h-auto py-1 whitespace-normal [overflow-wrap:anywhere]"
+                            key={index}
+                          >
+                            {word}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {!!incident.entities?.length && (
+                      <dl
+                        aria-label="Entidades"
+                        className="mt-3 grid gap-2 sm:grid-cols-2"
+                      >
+                        {incident.entities.map((entity, index) => (
+                          <div key={index}>
+                            <dt className="text-xs text-base-content/70">
+                              {enumLabel(entity.type)}
+                            </dt>
+                            <dd className="[overflow-wrap:anywhere]">
+                              {entity.value}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    )}
+                  </details>
+                )}
               </>
             ) : (
-              <p className="text-sm text-base-content/60">
-                Todavía no hay una clasificación registrada.
+              <p className="text-sm text-base-content/70">
+                {analyzing
+                  ? "La IA está analizando el reporte. Puedes continuar con la atención."
+                  : jobStatus === "FAILED"
+                    ? "El análisis de IA no pudo completarse. Puedes revisar la clasificación manualmente."
+                    : "Todavía no hay una clasificación registrada."}
               </p>
             )}
-          </section>
+          </div>
+        </section>
 
-          {(incident.resolutionSummary || incident.rejectionReason) && (
-            <section className="space-y-2 rounded-2xl border border-base-300 bg-base-100 p-5">
-              <h2 className="font-semibold">
+        <section
+          aria-labelledby="reported-location"
+          className="min-w-0 space-y-4 rounded-2xl border border-base-300 bg-base-100 p-4 sm:p-6 xl:col-span-2 xl:row-start-3"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex min-w-0 gap-3">
+              <span className="self-start rounded-xl bg-primary/10 p-2.5 text-primary">
+                <MapPin size={20} aria-hidden="true" />
+              </span>
+              <div className="min-w-0 space-y-1">
+                <h2
+                  id="reported-location"
+                  className="scroll-mt-24 text-lg font-bold"
+                >
+                  Ubicación reportada
+                </h2>
+                <p className="font-medium [overflow-wrap:anywhere]">
+                  {incident.address ?? "Sin dirección registrada"}
+                </p>
+                {incident.addressReference && (
+                  <p className="text-sm text-base-content/70 [overflow-wrap:anywhere]">
+                    Referencia: {incident.addressReference}
+                  </p>
+                )}
+                {coordinates && (
+                  <p className="font-mono text-xs text-base-content/70">
+                    {coordinates}
+                  </p>
+                )}
+              </div>
+            </div>
+            {hasCoordinates && (
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                aria-haspopup="dialog"
+                onClick={() => setMap(true)}
+              >
+                <Maximize2 size={16} aria-hidden="true" /> Ampliar mapa
+              </button>
+            )}
+          </div>
+          {hasCoordinates ? (
+            <Suspense
+              fallback={
+                <p
+                  role="status"
+                  className="grid h-72 place-items-center rounded-xl bg-base-200 sm:h-[26rem]"
+                >
+                  Cargando mapa…
+                </p>
+              }
+            >
+              <IncidentMap items={[incident]} base={base} variant="location" />
+            </Suspense>
+          ) : (
+            <p className="rounded-xl bg-base-200 p-4 text-sm">
+              El reporte no tiene coordenadas disponibles para el mapa.
+            </p>
+          )}
+        </section>
+
+        <section
+          aria-labelledby="incident-follow-up"
+          className="min-w-0 space-y-4 rounded-2xl border border-base-300 bg-base-100 p-4 sm:p-6 xl:col-start-1 xl:row-start-2"
+        >
+          <h2 id="incident-follow-up" className="text-lg font-bold">
+            Seguimiento municipal
+          </h2>
+          <dl className="grid grid-cols-2 gap-3 text-sm lg:grid-cols-5 xl:grid-cols-2">
+            <div className="col-span-2 rounded-xl bg-base-200/65 p-3 lg:col-span-1 xl:col-span-2">
+              <dt className="text-base-content/70">Responsable</dt>
+              <dd className="mt-1 font-medium [overflow-wrap:anywhere]">
+                {personName(incident.responsible) || "Sin responsable"}
+              </dd>
+            </div>
+            {milestones.map(([label, date]) => (
+              <div className="rounded-xl bg-base-200/65 p-3" key={label}>
+                <dt className="text-base-content/70">{label}</dt>
+                <dd className="mt-1 font-medium">
+                  {date ? formatDate(date) : "—"}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          {(incident.resolutionSummary ||
+            incident.cancellationReason ||
+            incident.rejectionReason) && (
+            <div className="space-y-2 border-t border-base-300 pt-4">
+              <h3 className="font-semibold">
                 {incident.resolutionSummary
                   ? "Resolución registrada"
-                  : "Motivo del rechazo"}
-              </h2>
-              <p className="whitespace-pre-wrap break-words leading-relaxed">
-                {incident.resolutionSummary ?? incident.rejectionReason}
+                  : incident.cancellationReason
+                    ? "Motivo de cancelación"
+                    : "Motivo del rechazo"}
+              </h3>
+              <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+                {incident.resolutionSummary ||
+                  incident.cancellationReason ||
+                  incident.rejectionReason}
               </p>
               {incident.rejectionComment && (
-                <p className="whitespace-pre-wrap break-words text-base-content/70">
+                <p className="whitespace-pre-wrap text-base-content/70 [overflow-wrap:anywhere]">
                   {incident.rejectionComment}
                 </p>
               )}
-            </section>
-          )}
-        </div>
-
-        <section className="min-w-0 self-start space-y-3 rounded-2xl border border-base-300 bg-base-100 p-5">
-          <h2 className="flex items-center gap-2 font-semibold">
-            <MapPin size={18} aria-hidden="true" /> Ubicación reportada
-          </h2>
-          <p className="break-words">
-            {incident.address ?? "Sin dirección registrada"}
-          </p>
-          {incident.addressReference && (
-            <p className="break-words text-sm text-base-content/70">
-              {incident.addressReference}
-            </p>
-          )}
-          <p className="font-mono text-xs text-base-content/65">
-            {incident.latitude}, {incident.longitude}
-          </p>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline"
-            aria-expanded={map}
-            onClick={() => setMap(!map)}
-          >
-            {map ? "Ocultar mapa" : "Ver en el mapa"}
-          </button>
-          {map && (
-            <Suspense fallback={<p>Cargando mapa…</p>}>
-              <IncidentMap items={[incident]} base={base} />
-            </Suspense>
+            </div>
           )}
         </section>
       </div>
-      <section className="rounded-xl border border-base-300 bg-base-100 p-4">
-        <p>
-          <strong>Responsable</strong>{" "}
-          {personName(incident.responsible) || "Sin responsable"}
-        </p>
-        <dl className="mt-2 flex flex-wrap gap-4 text-sm">
-          {(
-            [
-              ["Envío", incident.submittedAt],
-              ["Aceptación", incident.acceptedAt],
-              ["Inicio", incident.startedAt],
-              ["Cierre", incident.closedAt],
-            ] as const
-          ).map(
-            ([label, date]) =>
-              date && (
-                <div key={label}>
-                  <dt className="font-semibold">{label}</dt>
-                  <dd>{formatDate(date)}</dd>
-                </div>
-              ),
-          )}
-        </dl>
-        {incident.cancellationReason && (
-          <p className="mt-2">
-            <strong>Motivo de cancelación</strong> {incident.cancellationReason}
+
+      {map && (
+        <Dialog
+          title="Mapa de la ubicación"
+          onClose={() => setMap(false)}
+          boxClassName="w-[96vw] max-w-6xl p-3 sm:p-6"
+        >
+          <p className="text-sm text-base-content/75 [overflow-wrap:anywhere]">
+            {incident.address || coordinates}
           </p>
-        )}
-      </section>
-      <div className="flex flex-wrap gap-2">
-        {actions.map((x) => (
-          <button
-            type="button"
-            key={x}
-            className="btn btn-primary"
-            onClick={() => setAction(x)}
-          >
-            {labels[x]}
-          </button>
-        ))}
-      </div>
-      <div
-        className="flex flex-wrap gap-2"
-        aria-label="Registros de la incidencia"
-      >
-        {(["history", "evidence", "jobs"] as const).map((x, i) => (
-          <button
-            type="button"
-            key={x}
-            aria-pressed={mode === x}
-            className={`btn btn-sm ${mode === x ? "btn-primary" : ""}`}
-            onClick={() => {
-              setMode(x);
-              setPage(1);
-            }}
-          >
-            {["Historial", "Evidencias", "Trabajos IA"][i]}
-          </button>
-        ))}
-      </div>
-      {mode === "history" && (
-        <QueryView query={records.history}>
-          {(data) => (
-            <>
-              <PanelTable headers={["Fecha", "Transición", "Comentario"]}>
-                {data.items.map((x) => (
-                  <tr key={x.id}>
-                    <td>{formatDate(x.createdAt)}</td>
-                    <td>
-                      {enumLabel(x.previousStatus)} → {enumLabel(x.newStatus)}
-                    </td>
-                    <td>{x.comment ?? "—"}</td>
-                  </tr>
-                ))}
-              </PanelTable>
-              <Pager data={data} onPage={setPage} />
-            </>
-          )}
-        </QueryView>
+          <Suspense fallback={<p role="status">Cargando mapa…</p>}>
+            <IncidentMap items={[incident]} base={base} variant="expanded" />
+          </Suspense>
+        </Dialog>
       )}
-      {mode === "evidence" && (
-        <>
-          {own && incident.status === "IN_PROGRESS" && (
-            <form
-              className="flex flex-wrap gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const file = new FormData(e.currentTarget).get("file");
-                if (file instanceof File && file.size)
-                  operation.mutate({
-                    type: "evidence",
-                    args: [incident.id, file],
-                  });
+
+      <section
+        aria-labelledby="incident-records"
+        className="space-y-4 rounded-2xl border border-base-300 bg-base-100 p-4 sm:p-6"
+      >
+        <h2 id="incident-records" className="text-lg font-bold">
+          Registros de la incidencia
+        </h2>
+        <div
+          className="flex flex-wrap gap-2"
+          aria-label="Registros de la incidencia"
+        >
+          {(["history", "evidence", "jobs"] as const).map((x, i) => (
+            <button
+              type="button"
+              key={x}
+              aria-pressed={mode === x}
+              className={`btn btn-sm ${mode === x ? "btn-primary" : ""}`}
+              onClick={() => {
+                setMode(x);
+                setPage(1);
               }}
             >
-              <input
-                className="file-input"
-                name="file"
-                type="file"
-                accept="image/*"
-                required
-                aria-label="Evidencia de atención"
-              />
-              <button className="btn" disabled={operation.isPending}>
-                Adjuntar evidencia
-              </button>
-            </form>
-          )}
-          {operation.error && (
-            <p role="alert" className="alert alert-error">
-              {errorMessage(operation.error)}
-            </p>
-          )}
-          <QueryView query={records.evidence}>
+              {["Historial", "Evidencias", "Trabajos IA"][i]}
+            </button>
+          ))}
+        </div>
+        {mode === "history" && (
+          <QueryView query={records.history}>
             {(data) => (
               <>
-                <EvidenceGallery incidentId={incident.id} items={data.items} />
+                <PanelTable headers={["Fecha", "Transición", "Comentario"]}>
+                  {data.items.map((x) => (
+                    <tr key={x.id}>
+                      <td>{formatDate(x.createdAt)}</td>
+                      <td>
+                        {enumLabel(x.previousStatus)} → {enumLabel(x.newStatus)}
+                      </td>
+                      <td>{x.comment ?? "—"}</td>
+                    </tr>
+                  ))}
+                </PanelTable>
                 <Pager data={data} onPage={setPage} />
               </>
             )}
           </QueryView>
-        </>
-      )}
-      {mode === "jobs" && (
-        <QueryView query={records.jobs}>
-          {(data) => (
-            <>
-              <PanelTable headers={["Fecha de solicitud", "Estado", "Error"]}>
-                {data.items.map((x) => (
-                  <tr key={x.id}>
-                    <td>{formatDate(x.createdAt)}</td>
-                    <td>{enumLabel(x.status, "job")}</td>
-                    <td>{enumLabel(x.errorSummary)}</td>
-                  </tr>
-                ))}
-              </PanelTable>
-              <Pager data={data} onPage={setPage} />
-            </>
-          )}
-        </QueryView>
-      )}
+        )}
+        {mode === "evidence" && (
+          <>
+            {own && incident.status === "IN_PROGRESS" && (
+              <form
+                className="flex flex-wrap gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const file = new FormData(e.currentTarget).get("file");
+                  if (file instanceof File && file.size)
+                    operation.mutate({
+                      type: "evidence",
+                      args: [incident.id, file],
+                    });
+                }}
+              >
+                <input
+                  className="file-input max-w-full"
+                  name="file"
+                  type="file"
+                  accept="image/*"
+                  required
+                  aria-label="Evidencia de atención"
+                />
+                <button className="btn" disabled={operation.isPending}>
+                  Adjuntar evidencia
+                </button>
+              </form>
+            )}
+            {operation.error && (
+              <p role="alert" className="alert alert-error">
+                {errorMessage(operation.error)}
+              </p>
+            )}
+            <QueryView query={records.evidence}>
+              {(data) => (
+                <>
+                  <EvidenceGallery
+                    incidentId={incident.id}
+                    items={data.items}
+                  />
+                  <Pager data={data} onPage={setPage} />
+                </>
+              )}
+            </QueryView>
+          </>
+        )}
+        {mode === "jobs" && (
+          <QueryView query={records.jobs}>
+            {(data) => (
+              <>
+                <PanelTable headers={["Fecha de solicitud", "Estado", "Error"]}>
+                  {data.items.map((x) => (
+                    <tr key={x.id}>
+                      <td>{formatDate(x.createdAt)}</td>
+                      <td>{enumLabel(x.status, "job")}</td>
+                      <td>{enumLabel(x.errorSummary)}</td>
+                    </tr>
+                  ))}
+                </PanelTable>
+                <Pager data={data} onPage={setPage} />
+              </>
+            )}
+          </QueryView>
+        )}
+      </section>
       {action && (
         <WorkflowDialog
           key={action}
@@ -611,7 +874,7 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
           onClose={() => setAction(null)}
         />
       )}
-    </PanelPage>
+    </section>
   );
 }
 export default function IncidentDetailPage() {

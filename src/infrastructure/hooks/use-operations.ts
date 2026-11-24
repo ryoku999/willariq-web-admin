@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
@@ -20,13 +21,36 @@ export const useIncidents = (query: IncidentQuery) =>
     queryFn: () => api.incidents(query),
     refetchInterval: 30000,
   });
+const incidentDetail = (id: string) => ({
+  queryKey: ["operations", id, "detail"],
+  queryFn: () => api.detail(id),
+});
+
 export const useIncident = (id: string) =>
   useQuery({
-    queryKey: ["operations", id, "detail"],
-    queryFn: () => api.detail(id),
+    ...incidentDetail(id),
     refetchInterval: 30000,
     enabled: !!id,
   });
+export function useIncidentClassification(
+  id: string,
+  version: number,
+  enabled: boolean,
+) {
+  const query = useQuery({
+    ...incidentDetail(id),
+    enabled,
+    select: ({ classificationSource, version }) => ({
+      classificationSource,
+      version,
+    }),
+  });
+  const { data, refetch } = query;
+  useEffect(() => {
+    if (enabled && data && data.version < version) void refetch();
+  }, [data, enabled, refetch, version]);
+  return query;
+}
 export function useIncidentJobs(id: string, query: PageQuery, enabled = true) {
   return useQuery({
     queryKey: ["operations", id, "jobs", query],
