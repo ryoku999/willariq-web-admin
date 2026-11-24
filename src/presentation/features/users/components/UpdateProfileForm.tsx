@@ -4,7 +4,7 @@ import type {
 } from "@/core/entities/users.entity";
 import { useUpdateProfile } from "@/infrastructure/hooks/use-users";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Loader2, Pencil, UserRound } from "lucide-react";
+import { Loader2, Pencil, UserRound } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -73,12 +73,6 @@ const UpdateProfileForm = ({ user }: UpdateProfileFormProps) => {
         <div className="alert alert-error mb-5 text-sm">
           No pudimos actualizar tu perfil. Revisa los datos e inténtalo
           nuevamente.
-        </div>
-      )}
-
-      {updateProfile.isSuccess && !isDirty && (
-        <div className="alert alert-success mb-5 text-sm">
-          <Check size={17} /> Tus datos se actualizaron correctamente.
         </div>
       )}
 

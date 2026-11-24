@@ -9,9 +9,11 @@ export function useEmbeddingProfiles() {
 
 export function useEmbeddingProfileAction<T, V>(
   action: (value: V) => Promise<T>,
+  successMessage: string,
 ) {
   const cache = useQueryClient();
   return useMutation({
+    meta: { successMessage },
     mutationFn: action,
     onSuccess: () => cache.invalidateQueries({ queryKey }),
   });

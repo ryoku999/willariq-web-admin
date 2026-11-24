@@ -1,3 +1,5 @@
+import { ConfirmActionButton } from "@/presentation/components/ConfirmActionButton";
+import { useConfirmAction } from "@/presentation/components/useConfirmAction";
 import EmbeddingProfilesPanel from "./EmbeddingProfilesPanel";
 import { enumLabel, localizeEnumFields } from "@/shared/utils/enum-labels";
 import { useState, type FormEvent } from "react";
@@ -185,13 +187,19 @@ function PromptDetail({ id, onClose }: { id: string; onClose: () => void }) {
                 {JSON.stringify(prompt.responseSchema, null, 2)}
               </pre>
             </details>
-            <button
+            <ConfirmActionButton
               className="btn"
               disabled={activate.isPending}
-              onClick={() => activate.mutate([prompt.id, !prompt.active])}
+              confirmation={{
+                title: prompt.active ? "¿Desactivar el prompt?" : "¿Activar el prompt?",
+                description: prompt.active
+                  ? "Esta versión dejará de estar activa para la capacidad."
+                  : "Esta versión quedará activa para la capacidad.",
+                onAccept: () => activate.mutate([prompt.id, !prompt.active]),
+              }}
             >
               {prompt.active ? "Desactivar" : "Activar"}
-            </button>
+            </ConfirmActionButton>
             <form
               className="grid gap-2"
               onSubmit={(e) => {
@@ -244,12 +252,14 @@ function RouteForm({
   const create = useAdminAction("createRoute");
   const edit = useAdminAction("updateRoute");
   const busy = create.isPending || edit.isPending;
+  const { confirm, dialog } = useConfirmAction();
   return (
     <Dialog
       title={route ? "Editar ruta" : "Nueva ruta"}
       onClose={onClose}
       busy={busy}
     >
+      {dialog}
       <form
         className="grid gap-3"
         onSubmit={(e) => {
@@ -260,8 +270,18 @@ function RouteForm({
             timeoutMs: Number(f.get("timeoutMs")),
             enabled: f.has("enabled"),
           };
-          if (route) edit.mutate([route.id, payload], { onSuccess: onClose });
-          else
+          if (route) {
+            const save = () => edit.mutate([route.id, payload], { onSuccess: onClose });
+            if (route.enabled && !payload.enabled) {
+              confirm({
+                title: "¿Desactivar esta ruta?",
+                description: "La ruta dejará de estar disponible para esta capacidad.",
+                onAccept: save,
+              });
+            } else {
+              save();
+            }
+          } else
             create.mutate(
               [
                 {

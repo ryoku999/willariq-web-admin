@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   IncidentQuery,
@@ -91,6 +92,11 @@ export function useOperationMutation() {
       if (operation.type === "assignment")
         return api.assignmentAction(...operation.args);
       return api.uploadEvidence(...operation.args);
+    },
+    onSuccess: (_data, operation) => {
+      if (operation.type === "evidence") toast.success("Evidencia adjuntada.");
+      else if (operation.type === "assignment") toast.success("Asignación actualizada.");
+      else toast.success("Incidencia actualizada.");
     },
     onSettled: () =>
       Promise.all([

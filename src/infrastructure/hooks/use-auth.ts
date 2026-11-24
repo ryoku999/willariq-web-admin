@@ -8,6 +8,7 @@ export const useLogin = () => {
   const setUser = useAuthStore((state) => state.setUser);
 
   return useMutation({
+    meta: { successMessage: "Sesión iniciada." },
     mutationKey: ["web", "login"],
     mutationFn: (dto: LoginReq) => authService.login(dto),
     onSuccess: (data) => {
@@ -22,6 +23,7 @@ export const useLogin = () => {
 
 export const useLogout = () => {
   return useMutation({
+    meta: { successMessage: "Sesión cerrada." },
     mutationKey: ["web", "logout"],
     mutationFn: () => authService.logout(),
     onSettled: endSession,

@@ -27,6 +27,7 @@ export const useUpdateProfile = () => {
   const setUser = useAuthStore((state) => state.setUser);
 
   return useMutation({
+    meta: { successMessage: "Perfil actualizado." },
     mutationKey: ["update", "profile"],
     mutationFn: (dto: UpdateProfileReq) => usersService.updateProfile(dto),
     onSuccess: (data) => {
@@ -62,6 +63,7 @@ export const useGetUserById = (dto: UserByIdReq) => {
 export const useUserUpdateStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({
+    meta: { successMessage: "Estado del usuario actualizado." },
     mutationKey: ["user", "update", "status"],
     mutationFn: (dto: UpdateStatusReq) => usersService.updateStatus(dto),
     onSuccess: (data) => {
@@ -74,6 +76,7 @@ export const useUserUpdateStatus = () => {
 export const useUserUpdateRole = () => {
   const queryClient = useQueryClient();
   return useMutation({
+    meta: { successMessage: "Rol del usuario actualizado." },
     mutationKey: ["user", "update", "role"],
     mutationFn: (dto: UpdateRoleReq) => usersService.updateRole(dto),
     onSuccess: (data) => {
@@ -86,6 +89,7 @@ export const useUserUpdateRole = () => {
 export function useCreateUser() {
   const cache = useQueryClient();
   return useMutation({
+    meta: { successMessage: "Usuario creado." },
     mutationFn: (dto: CreateUserReq) => usersService.create(dto),
     onSuccess: () => cache.invalidateQueries({ queryKey: ["users", "list"] }),
   });

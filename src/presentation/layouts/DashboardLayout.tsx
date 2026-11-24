@@ -1,3 +1,4 @@
+import { ConfirmActionButton } from "@/presentation/components/ConfirmActionButton";
 import { useUnreadCount } from "@/infrastructure/hooks/use-engagement";
 import { LogOut, Menu, X, ChevronDown, ChevronRight } from "lucide-react";
 import { useState, type PropsWithChildren } from "react";
@@ -191,15 +192,19 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
               </h1>
             </div>
           </div>
-          <button
-            onClick={() => logout.mutate()}
+          <ConfirmActionButton
+            confirmation={{
+              title: "¿Cerrar sesión?",
+              description: "Tendrás que iniciar sesión de nuevo para acceder al panel.",
+              onAccept: () => logout.mutate(),
+            }}
             disabled={logout.isPending}
             aria-label="Cerrar sesión"
             className="btn btn-outline btn-sm gap-2 border-base-300 text-base-content/70 hover:border-error hover:bg-error hover:text-error-content"
           >
             <LogOut size={16} />
             <span className="hidden sm:inline">Salir</span>
-          </button>
+          </ConfirmActionButton>
         </header>
         <main className="p-5 sm:p-8">
           <Outlet />

@@ -1,3 +1,4 @@
+import { useConfirmAction } from "@/presentation/components/useConfirmAction";
 import {
   useGetUserById,
   useUserUpdateRole,
@@ -41,6 +42,7 @@ const UsersDeatilsPage = () => {
 
   const query = useGetUserById({ userId: userId ?? "" });
   const updateStatus = useUserUpdateStatus();
+  const { confirm, dialog } = useConfirmAction();
   const updateRole = useUserUpdateRole();
   if (!userId)
     return (
@@ -60,6 +62,7 @@ const UsersDeatilsPage = () => {
   const refresh = () => query.refetch();
   return (
     <div className="mx-auto max-w-5xl space-y-6">
+      {dialog}
       <Link to="/users" className="btn btn-ghost btn-sm gap-2">
         <ArrowLeft size={16} /> Volver a usuarios
       </Link>
@@ -121,10 +124,13 @@ const UsersDeatilsPage = () => {
               value={currentRole}
               disabled={updateRole.isPending}
               onChange={(event) => {
-                updateRole.mutate(
-                  { userId, role: event.target.value as UserRole },
-                  { onSuccess: refresh },
-                );
+                const role = event.target.value as UserRole;
+                confirm({
+                  title: "¿Cambiar el rol del usuario?",
+                  description: "El cambio modifica los permisos de acceso de esta cuenta.",
+                  onAccept: () =>
+                    updateRole.mutate({ userId, role }, { onSuccess: refresh }),
+                });
               }}
             >
               {currentRole === "CITIZEN" && <option value="CITIZEN" disabled>Ciudadano</option>}
@@ -142,10 +148,13 @@ const UsersDeatilsPage = () => {
               value={currentStatus}
               disabled={updateStatus.isPending}
               onChange={(event) => {
-                updateStatus.mutate(
-                  { userId, status: event.target.value as UserStatus },
-                  { onSuccess: refresh },
-                );
+                const status = event.target.value as UserStatus;
+                confirm({
+                  title: "¿Cambiar el estado del usuario?",
+                  description: "La cuenta pasará al estado " + statusLabels[status] + ".",
+                  onAccept: () =>
+                    updateStatus.mutate({ userId, status }, { onSuccess: refresh }),
+                });
               }}
             >
               {Object.entries(statusLabels).map(([key, label]) => (

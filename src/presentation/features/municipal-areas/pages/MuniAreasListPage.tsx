@@ -1,3 +1,4 @@
+import { ConfirmActionButton } from "@/presentation/components/ConfirmActionButton";
 import { enumLabel } from "@/shared/utils/enum-labels";
 import { useState, type FormEvent } from "react";
 import type { MuniAreasListItems } from "@/core/entities/muni-areas.entity";
@@ -277,22 +278,20 @@ function Members({
                   <td>{enumLabel(row.role)}</td>
                   <td>
                     {editable && row.active && (
-                      <button
+                      <ConfirmActionButton
                         className="btn btn-sm"
                         disabled={mutation.isPending}
-                        onClick={() => {
-                          if (window.confirm("¿Desactivar esta membresía?"))
-                            mutation.mutate({
-                              type: "remove",
-                              data: {
-                                muniAreaId: area.id,
-                                memberId: row.userId,
-                              },
-                            });
+                        confirmation={{
+                          title: "¿Quitar a este integrante?",
+                          description: "Se desactivará su membresía en el área municipal.",
+                          onAccept: () => mutation.mutate({
+                            type: "remove",
+                            data: { muniAreaId: area.id, memberId: row.userId },
+                          }),
                         }}
                       >
                         Quitar
-                      </button>
+                      </ConfirmActionButton>
                     )}
                   </td>
                 </tr>
@@ -388,27 +387,25 @@ export default function MuniAreasListPage() {
                         >
                           Editar
                         </button>
-                        <button
+                        <ConfirmActionButton
                           className="btn btn-sm"
                           disabled={mutation.isPending}
-                          onClick={() => {
-                            if (window.confirm("¿Cambiar estado del área?"))
-                              mutation.mutate({
-                                type: "status",
-                                data: {
-                                  muniAreasId: area.id,
-                                  payload: {
-                                    status:
-                                      area.status === "ACTIVE"
-                                        ? "INACTIVE"
-                                        : "ACTIVE",
-                                  },
-                                },
-                              });
+                          confirmation={{
+                            title: area.status === "ACTIVE" ? "¿Desactivar el área?" : "¿Activar el área?",
+                            description: area.status === "ACTIVE"
+                              ? "El área quedará inactiva."
+                              : "El área volverá a estar activa.",
+                            onAccept: () => mutation.mutate({
+                              type: "status",
+                              data: {
+                                muniAreasId: area.id,
+                                payload: { status: area.status === "ACTIVE" ? "INACTIVE" : "ACTIVE" },
+                              },
+                            }),
                           }}
                         >
                           {area.status === "ACTIVE" ? "Desactivar" : "Activar"}
-                        </button>
+                        </ConfirmActionButton>
                       </>
                     )}
                   </td>

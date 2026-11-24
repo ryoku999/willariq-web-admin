@@ -122,11 +122,13 @@ export function Dialog({
   onClose,
   children,
   busy = false,
+  closeLabel = "Cerrar",
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   busy?: boolean;
+  closeLabel?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -153,7 +155,7 @@ export function Dialog({
             onClick={onClose}
             disabled={busy}
           >
-            Cerrar
+            {closeLabel}
           </button>
         </div>
         {children}

@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   MuniAreasCreateReq,
@@ -63,10 +64,19 @@ export function useAreaMutation() {
           return members.deleteMember(action.data);
       }
     },
-    onSuccess: () =>
-      Promise.all([
+    onSuccess: (_data, action) => {
+      const messages = {
+        create: "Área municipal creada.",
+        update: "Área municipal actualizada.",
+        status: "Estado del área actualizado.",
+        add: "Integrante agregado al área.",
+        remove: "Membresía desactivada.",
+      };
+      toast.success(messages[action.type]);
+      return Promise.all([
         cache.invalidateQueries({ queryKey: ["municipal-areas"] }),
         cache.invalidateQueries({ queryKey: ["operations"] }),
-      ]),
+      ]);
+    },
   });
 }

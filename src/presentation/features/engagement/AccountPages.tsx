@@ -1,3 +1,5 @@
+import { ConfirmActionButton } from "@/presentation/components/ConfirmActionButton";
+import { useConfirmAction } from "@/presentation/components/useConfirmAction";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { endSession } from "@/config/http/auth-session";
@@ -14,6 +16,7 @@ export function AccountSettings({
   verified: boolean;
 }) {
   const navigate = useNavigate();
+  const { confirm, dialog } = useConfirmAction();
   const emailAction = useEngagementAction("setEmail");
   const verify = useEngagementAction("requestVerification");
   const password = useEngagementAction("changePassword");
@@ -31,6 +34,7 @@ export function AccountSettings({
     logout.isPending;
   return (
     <section className="space-y-4 rounded-3xl border border-base-300 bg-base-100 p-5">
+      {dialog}
       <h2 className="text-lg font-bold">Correo y seguridad</h2>
       <p>
         {email ?? "Sin correo registrado"} ·{" "}
@@ -85,21 +89,20 @@ export function AccountSettings({
         Enviar enlace de verificación
       </button>
       {verify.data && <p role="status">{verify.data.message}</p>}
-      {emailAction.isSuccess && <p role="status">Correo guardado.</p>}
       <form
         className="flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
           e.preventDefault();
           const fields = new FormData(e.currentTarget);
-          password.mutate(
-            [
-              {
-                currentPassword: value(fields, "currentPassword"),
-                newPassword: value(fields, "newPassword"),
-              },
-            ],
-            { onSuccess: leave },
-          );
+          const passwords = {
+            currentPassword: value(fields, "currentPassword"),
+            newPassword: value(fields, "newPassword"),
+          };
+          confirm({
+            title: "¿Cambiar tu contraseña?",
+            description: "Después del cambio, tendrás que iniciar sesión de nuevo.",
+            onAccept: () => password.mutate([passwords], { onSuccess: leave }),
+          });
         }}
       >
         <Field label="Contraseña actual">
@@ -128,16 +131,17 @@ export function AccountSettings({
           Cambiar contraseña
         </button>
       </form>
-      <button
+      <ConfirmActionButton
         className="btn btn-error btn-outline"
         disabled={busy}
-        onClick={() => {
-          if (window.confirm("¿Cerrar todas tus sesiones?"))
-            logout.mutate([], { onSuccess: leave });
+        confirmation={{
+          title: "¿Cerrar todas tus sesiones?",
+          description: "Se cerrará tu sesión actual y las de los demás dispositivos.",
+          onAccept: () => logout.mutate([], { onSuccess: leave }),
         }}
       >
         Cerrar todas las sesiones
-      </button>
+      </ConfirmActionButton>
       {error && (
         <p className="alert alert-error" role="alert">
           {errorMessage(error)}

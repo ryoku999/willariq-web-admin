@@ -176,7 +176,12 @@ function WorkflowDialog({
       );
   }
   return (
-    <Dialog title={labels[action]} onClose={onClose} busy={mutation.isPending}>
+    <Dialog
+      title={labels[action]}
+      onClose={onClose}
+      busy={mutation.isPending}
+      closeLabel="Cancelar"
+    >
       <form onSubmit={submit} className="grid gap-3">
         {action === "review" && (
           <>

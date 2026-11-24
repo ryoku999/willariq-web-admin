@@ -1,3 +1,4 @@
+import { ConfirmActionButton } from "@/presentation/components/ConfirmActionButton";
 import {
   useEmbeddingProfileAction,
   useEmbeddingProfiles,
@@ -12,9 +13,9 @@ import { errorMessage } from "@/shared/utils/panel-format";
 
 export default function EmbeddingProfilesPanel() {
   const profiles = useEmbeddingProfiles();
-  const save = useEmbeddingProfileAction(service.save);
-  const reindex = useEmbeddingProfileAction(service.reindex);
-  const activate = useEmbeddingProfileAction(service.activate);
+  const save = useEmbeddingProfileAction(service.save, "Perfil de embeddings guardado.");
+  const reindex = useEmbeddingProfileAction(service.reindex, "Solicitud de reindexación enviada.");
+  const activate = useEmbeddingProfileAction(service.activate, "Perfil de embeddings activado.");
   const busy = save.isPending || reindex.isPending || activate.isPending;
   const error = save.error ?? reindex.error ?? activate.error;
 
@@ -137,17 +138,21 @@ export default function EmbeddingProfilesPanel() {
                       >
                         Reindexar publicados
                       </button>
-                      <button
+                      <ConfirmActionButton
                         className="btn btn-sm btn-primary"
                         disabled={busy}
-                        onClick={() => {
-                          save.reset();
-                          reindex.reset();
-                          activate.mutate(profile.id);
+                        confirmation={{
+                          title: "¿Activar este perfil de embeddings?",
+                          description: "Este perfil se usará para las búsquedas de conocimiento.",
+                          onAccept: () => {
+                            save.reset();
+                            reindex.reset();
+                            activate.mutate(profile.id);
+                          },
                         }}
                       >
                         Activar
-                      </button>
+                      </ConfirmActionButton>
                     </>
                   )}
                 </td>
