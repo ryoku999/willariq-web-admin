@@ -42,7 +42,7 @@ export const formatDate = (date: string) =>
   }).format(new Date(date));
 
 export function personName(
-  person: { firstName: string; lastName: string | null } | null | undefined,
+  person: { firstName: string | null; lastName: string | null } | null | undefined,
 ) {
   return person
     ? [person.firstName, person.lastName].filter(Boolean).join(" ")

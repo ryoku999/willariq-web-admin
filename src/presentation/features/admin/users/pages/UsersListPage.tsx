@@ -1,6 +1,6 @@
 import type { ManagedUserRole } from "@/core/entities/users.entity";
 import { Dialog, Field } from "@/presentation/components/PanelControls";
-import { errorMessage } from "@/shared/utils/panel-format";
+import { errorMessage, personName } from "@/shared/utils/panel-format";
 import { useCreateUser, useUsersList } from "@/infrastructure/hooks/use-users";
 import ErrorState from "@/presentation/components/ErrorState";
 import LoadingState from "@/presentation/components/LoadingState";
@@ -242,12 +242,11 @@ const UsersListPage = () => {
                   <td>
                     <div className="flex items-center gap-3">
                       <div className="grid size-10 place-items-center rounded-xl bg-primary/10 font-bold text-primary">
-                        {user.firstName[0]}
-                        {user.lastName?.[0]}
+                        {`${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}` || "—"}
                       </div>
                       <div>
                         <p className="font-semibold">
-                          {user.firstName} {user.lastName}
+                          {personName(user) || "Sin nombre registrado"}
                         </p>
                         <p className="text-xs text-base-content/50">
                           {user.email ?? "Sin correo"}

@@ -5,6 +5,7 @@ import {
 } from "@/infrastructure/hooks/use-users";
 import ErrorState from "@/presentation/components/ErrorState";
 import LoadingState from "@/presentation/components/LoadingState";
+import { errorMessage, personName } from "@/shared/utils/panel-format";
 import type {
   UserRole,
   UserStatus,
@@ -54,7 +55,7 @@ const UsersDeatilsPage = () => {
       <ErrorState title="No se pudo cargar el perfil" onRetry={query.refetch} />
     );
   const user = query.data;
-  const currentRole = user.role as UserRole;
+  const currentRole = user.role as UserRole | "CITIZEN";
   const currentStatus = user.status as UserStatus;
   const refresh = () => query.refetch();
   return (
@@ -66,12 +67,11 @@ const UsersDeatilsPage = () => {
         <div className="bg-primary px-6 py-8 text-primary-content sm:px-8">
           <div className="flex items-center gap-4">
             <div className="grid size-20 place-items-center rounded-3xl bg-primary-content text-2xl font-bold text-primary">
-              {user.firstName[0]}
-              {user.lastName?.[0]}
+              {`${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}` || "—"}
             </div>
             <div>
               <h1 className="text-2xl font-bold">
-                {user.firstName} {user.lastName}
+                {personName(user) || "Sin nombre registrado"}
               </h1>
               <p className="mt-1 text-sm text-primary-content/75">
                 {user.email ?? "Sin correo registrado"}
@@ -94,7 +94,7 @@ const UsersDeatilsPage = () => {
           <Info
             icon={ShieldCheck}
             label="Rol"
-            value={roleLabels[currentRole] ?? user.role}
+            value={currentRole === "CITIZEN" ? "Ciudadano" : roleLabels[currentRole] ?? user.role}
           />
           <Info
             icon={CheckCircle2}
@@ -127,6 +127,7 @@ const UsersDeatilsPage = () => {
                 );
               }}
             >
+              {currentRole === "CITIZEN" && <option value="CITIZEN" disabled>Ciudadano</option>}
               {Object.entries(roleLabels).map(([key, label]) => (
                 <option key={key} value={key}>
                   {label}
@@ -157,7 +158,7 @@ const UsersDeatilsPage = () => {
         </div>
         {(updateRole.isError || updateStatus.isError) && (
           <div className="alert alert-error mt-4">
-            No se pudo actualizar el acceso.
+            {errorMessage(updateRole.error ?? updateStatus.error)}
           </div>
         )}
       </section>
