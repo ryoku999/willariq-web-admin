@@ -809,7 +809,7 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
                 onSubmit={(e) => {
                   e.preventDefault();
                   const file = new FormData(e.currentTarget).get("file");
-                  if (file instanceof File && file.size)
+                  if (file instanceof File)
                     operation.mutate({
                       type: "evidence",
                       args: [incident.id, file],
@@ -820,12 +820,14 @@ function IncidentBody({ incident }: { incident: IncidentDetail }) {
                   className="file-input max-w-full"
                   name="file"
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   required
                   aria-label="Evidencia de atención"
                 />
                 <button className="btn" disabled={operation.isPending}>
-                  Adjuntar evidencia
+                  {operation.isPending
+                    ? "Preparando o subiendo…"
+                    : "Adjuntar evidencia"}
                 </button>
               </form>
             )}
