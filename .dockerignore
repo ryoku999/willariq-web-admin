@@ -1,0 +1,38 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+coverage
+.vite
+*.tsbuildinfo
+
+# Git
+.git
+.gitignore
+.github
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Documentation
+*.md
+docs
+
+# Logs
+*.log
+
+# Editors
+.vscode
+.idea
+
+# AI tools
+.agents
+.claude
+
+# Operating system
+.DS_Store
+Thumbs.db

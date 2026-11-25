@@ -1,0 +1,25 @@
+services:
+  willariq-web-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        VITE_API_URL: ${VITE_API_URL:?VITE_API_URL is required}
+
+    restart: unless-stopped
+
+    expose:
+      - "7000"
+
+    security_opt:
+      - no-new-privileges:true
+
+    networks:
+      dokploy-network:
+        aliases:
+          - willariq-web-admin
+
+networks:
+  dokploy-network:
+    external: true
