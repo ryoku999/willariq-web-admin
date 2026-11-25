@@ -6,8 +6,6 @@ export const roleBasedRedirection = (role: UserRole) => {
       return "/";
     case "OPERATOR":
       return "/operator";
-    case "SUPERVISOR":
-      return "/supervisor";
     default:
       return "/login";
   }

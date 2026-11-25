@@ -1,7 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
 import {
-  AreasPage,
   AuditPage,
   AiConfigurationPage,
   ChatPage,
@@ -9,14 +8,12 @@ import {
   IncidentsPage,
   KnowledgePage,
   MonitoringPage,
-  MyAssignmentsPage,
   NotificationsPage,
   PublicAccountPage,
   DashboardPage,
   LoginPage,
   OperatorDashboardPage,
   ProfilePage,
-  SupervisorDashboardPage,
   UsersDeatilsPage,
   UsersListPage,
 } from "./lazy-routes";
@@ -27,7 +24,6 @@ import AuthGuard from "../guards/AuthGuard";
 import GuestGuard from "../guards/GuestGuard";
 import NotFoundPage from "../components/NotFoundPage";
 import OperatorLayout from "../layouts/OperatorLayout";
-import SupervisorLayout from "../layouts/SupervisorLayout";
 import RoleGuard from "../guards/RoleGuard";
 import ErrorState from "../components/ErrorState";
 
@@ -39,9 +35,7 @@ const screen = (path: string, page: ReactNode) => ({
 const operationRoutes = (prefix: string) => [
   screen(`${prefix}/incidents`, <IncidentsPage />),
   screen(`${prefix}/incidents/:id`, <IncidentDetailPage />),
-  screen(`${prefix}/municipal-areas`, <AreasPage />),
   screen(`${prefix}/notifications`, <NotificationsPage />),
-  screen(`${prefix}/assignments`, <MyAssignmentsPage />),
 ];
 
 export const routes = createBrowserRouter([
@@ -118,36 +112,6 @@ export const routes = createBrowserRouter([
 
       {
         path: "/operator/profile",
-        element: (
-          <Suspense fallback={<LazyLoading />}>
-            <ProfilePage />
-          </Suspense>
-        ),
-      },
-    ],
-  },
-  {
-    element: (
-      <AuthGuard>
-        <RoleGuard allowedRoles={["SUPERVISOR"]}>
-          <SupervisorLayout />
-        </RoleGuard>
-      </AuthGuard>
-    ),
-    children: [
-      ...operationRoutes("/supervisor"),
-      screen("/supervisor/ai/jobs", <MonitoringPage />),
-      {
-        path: "/supervisor",
-        element: (
-          <Suspense fallback={<LazyLoading />}>
-            <SupervisorDashboardPage />
-          </Suspense>
-        ),
-      },
-
-      {
-        path: "/supervisor/profile",
         element: (
           <Suspense fallback={<LazyLoading />}>
             <ProfilePage />

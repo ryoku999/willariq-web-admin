@@ -17,7 +17,6 @@ import {
 
 const roleLabels = {
   ADMIN: "Administrador",
-  SUPERVISOR: "Supervisor",
   OPERATOR: "Operador",
 } as const;
 

@@ -65,10 +65,10 @@ export interface UsersListQry {
 export interface UsersListRes {
   items: {
     id: string;
-    firstName: string;
-    lastName: string;
+    firstName: string | null;
+    lastName: string | null;
     dni: string;
-    phone: string;
+    phone: string | null;
     email: string | null;
     emailVerifiedAt: string | null;
     role: string;
@@ -92,10 +92,10 @@ export interface UserByIdReq {
 // get user by id response
 export interface UserByIdRes {
   id: string;
-  firstName: string;
-  lastName: string;
+  firstName: string | null;
+  lastName: string | null;
   dni: string;
-  phone: string;
+  phone: string | null;
   email: string | null;
   emailVerifiedAt: string | null;
   role: string;
@@ -112,10 +112,10 @@ export interface UpdateStatusReq {
 // update status response
 export interface UpdateStatusRes {
   id: string;
-  firstName: string;
-  lastName: string;
+  firstName: string | null;
+  lastName: string | null;
   dni: string;
-  phone: string;
+  phone: string | null;
   email: string | null;
   emailVerifiedAt: string | null;
   role: string;
@@ -132,10 +132,10 @@ export interface UpdateRoleReq {
 // update status response
 export interface UpdateRoleRes {
   id: string;
-  firstName: string;
-  lastName: string;
+  firstName: string | null;
+  lastName: string | null;
   dni: string;
-  phone: string;
+  phone: string | null;
   email: string | null;
   emailVerifiedAt: string | null;
   role: string;

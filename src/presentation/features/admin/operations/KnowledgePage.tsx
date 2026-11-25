@@ -1,3 +1,4 @@
+import { ConfirmActionButton } from "@/presentation/components/ConfirmActionButton";
 import { enumLabel } from "@/shared/utils/enum-labels";
 import { useState } from "react";
 import {
@@ -76,20 +77,17 @@ function DocumentDetail({ id, onClose }: { id: string; onClose: () => void }) {
                   >
                     Publicar
                   </button>
-                  <button
+                  <ConfirmActionButton
                     className="btn btn-sm"
                     disabled={action.isPending}
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          "¿Archivar y retirar este documento de la búsqueda?",
-                        )
-                      )
-                        action.mutate([id, "archive"]);
+                    confirmation={{
+                      title: "¿Archivar este documento?",
+                      description: "El documento se retirará de la búsqueda.",
+                      onAccept: () => action.mutate([id, "archive"]),
                     }}
                   >
                     Archivar
-                  </button>
+                  </ConfirmActionButton>
                 </>
               )}
             </div>

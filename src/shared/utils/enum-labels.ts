@@ -2,7 +2,6 @@ import { hideTechnicalIds } from "./panel-format";
 
 const labels: Readonly<Record<string, string>> = {
   ADMIN: "Administrador",
-  SUPERVISOR: "Supervisor",
   OPERATOR: "Operador",
   CITIZEN: "Ciudadano",
   MANAGER: "Responsable de área",
@@ -11,7 +10,7 @@ const labels: Readonly<Record<string, string>> = {
   BLOCKED: "Bloqueado",
   RECEIVED: "Recibida",
   AI_ANALYSIS: "En análisis por IA",
-  IN_REVIEW: "En revisión",
+  NEW: "Nueva",
   ACCEPTED: "Aceptada",
   ASSIGNED: "Asignada",
   IN_PROGRESS: "En atención",

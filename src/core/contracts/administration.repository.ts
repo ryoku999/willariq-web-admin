@@ -27,7 +27,13 @@ export interface AdministrationRepository {
   ): Promise<AiRoute>;
   reorderRoutes(capability: Capability, routeIds: string[]): Promise<unknown>;
   providers(): Promise<{ items: ProviderStatus[] }>;
-  check(capability: Capability): Promise<unknown>;
+  check(capability: Capability): Promise<{
+    items: {
+      capability: Capability;
+      configurationReady: boolean;
+      issues: string[];
+    }[];
+  }>;
   classificationSchema(): Promise<{ responseSchema: object }>;
   audit(
     query: PageQuery & {

@@ -1,3 +1,6 @@
+import { IncidentAlerts } from "@/presentation/components/IncidentAlerts";
+import { useUserProfile } from "@/infrastructure/hooks/use-users";
+import { ConfirmActionButton } from "@/presentation/components/ConfirmActionButton";
 import { useUnreadCount } from "@/infrastructure/hooks/use-engagement";
 import { LogOut, Menu, X, ChevronDown, ChevronRight } from "lucide-react";
 import { useState, type PropsWithChildren } from "react";
@@ -12,13 +15,13 @@ type DashboardLayoutProps = PropsWithChildren<{ role: UserRole }>;
 
 const roleLabels: Record<UserRole, string> = {
   ADMIN: "Administrador",
-  SUPERVISOR: "Supervisor",
   OPERATOR: "Operador",
 };
 
 const DashboardLayout = ({ role }: DashboardLayoutProps) => {
   const user = useAuthStore((state) => state.user);
   const logout = useLogout();
+  const profile = useUserProfile();
   const unread = useUnreadCount();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -163,7 +166,9 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
             <span className="block truncate text-sm font-bold">
               {user?.name} {user?.lastName}
             </span>
-            <span className="block text-xs text-base-content/60">Mi perfil</span>
+            <span className="block text-xs text-base-content/60">
+              Mi perfil
+            </span>
           </span>
           <ChevronRight size={16} aria-hidden="true" className="shrink-0" />
         </NavLink>
@@ -191,15 +196,29 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
               </h1>
             </div>
           </div>
-          <button
-            onClick={() => logout.mutate()}
-            disabled={logout.isPending}
-            aria-label="Cerrar sesión"
-            className="btn btn-outline btn-sm gap-2 border-base-300 text-base-content/70 hover:border-error hover:bg-error hover:text-error-content"
-          >
-            <LogOut size={16} />
-            <span className="hidden sm:inline">Salir</span>
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {profile.data && (
+              <IncidentAlerts
+                key={profile.data.id}
+                userId={profile.data.id}
+                role={role}
+              />
+            )}
+            <ConfirmActionButton
+              confirmation={{
+                title: "¿Cerrar sesión?",
+                description:
+                  "Tendrás que iniciar sesión de nuevo para acceder al panel.",
+                onAccept: () => logout.mutate(),
+              }}
+              disabled={logout.isPending}
+              aria-label="Cerrar sesión"
+              className="btn btn-outline btn-sm gap-2 border-base-300 text-base-content/70 hover:border-error hover:bg-error hover:text-error-content"
+            >
+              <LogOut size={16} />
+              <span className="hidden sm:inline">Salir</span>
+            </ConfirmActionButton>
+          </div>
         </header>
         <main className="p-5 sm:p-8">
           <Outlet />

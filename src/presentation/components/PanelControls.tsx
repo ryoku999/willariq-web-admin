@@ -122,11 +122,15 @@ export function Dialog({
   onClose,
   children,
   busy = false,
+  closeLabel = "Cerrar",
+  boxClassName = "max-w-2xl",
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   busy?: boolean;
+  closeLabel?: string;
+  boxClassName?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -144,7 +148,7 @@ export function Dialog({
         if (!busy) onClose();
       }}
     >
-      <div className="modal-box max-w-2xl space-y-4">
+      <div className={"modal-box space-y-4 " + boxClassName}>
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-xl font-bold">{title}</h2>
           <button
@@ -153,7 +157,7 @@ export function Dialog({
             onClick={onClose}
             disabled={busy}
           >
-            Cerrar
+            {closeLabel}
           </button>
         </div>
         {children}

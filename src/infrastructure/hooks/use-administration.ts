@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AdministrationRepository } from "@/core/contracts/administration.repository";
 import type { Capability } from "@/core/entities/administration.entity";
@@ -95,14 +96,33 @@ type Commands = Pick<
   | "documentContent"
   | "classificationSchema"
 >;
+const successMessages: Partial<Record<keyof Commands, string>> = {
+  createPrompt: "Prompt creado.",
+  createRoute: "Ruta creada.",
+  updateRoute: "Ruta actualizada.",
+  reorderRoutes: "Orden de las rutas actualizado.",
+  retryOutbox: "Reintento solicitado.",
+  uploadDocument: "Documento cargado.",
+};
+
 export function useAdminAction<K extends keyof Commands>(key: K) {
   const cache = useQueryClient();
   const command = api[key] as (
     ...args: Parameters<Commands[K]>
   ) => Promise<Awaited<ReturnType<Commands[K]>>>;
   return useMutation({
+    meta: { successMessage: successMessages[key] },
     mutationFn: (args: Parameters<Commands[K]>) => command(...args),
-    onSuccess: () => {
+    onSuccess: (_data, args) => {
+      if (key === "activatePrompt") {
+        toast.success(args[1] ? "Prompt activado." : "Prompt desactivado.");
+      }
+      if (key === "documentAction") {
+        const action = args[1];
+        if (action === "process") toast.success("Procesamiento solicitado.");
+        if (action === "publish") toast.success("Documento publicado.");
+        if (action === "archive") toast.success("Documento archivado.");
+      }
       if (
         ![
           "check",

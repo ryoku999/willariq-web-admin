@@ -1,3 +1,4 @@
+import { prepareEvidenceImage } from "@/shared/utils/prepare-evidence-image";
 import type { OperationsRepository } from "@/core/contracts/operations.repository";
 import { apiBlob, apiData } from "./api-data";
 
@@ -7,21 +8,17 @@ export const operationsService: OperationsRepository = {
   detail: (id) => apiData("GET", `/incidents/${id}`),
   history: (id, params) =>
     apiData("GET", `/incidents/${id}/history`, { params }),
-  assignments: (id, params) =>
-    apiData("GET", `/incidents/${id}/assignments`, { params }),
-  mine: (params) => apiData("GET", "/assignments/me", { params }),
   evidence: (id, params) =>
     apiData("GET", `/incidents/${id}/evidence`, { params }),
   evidenceContent: (id, evidenceId) =>
     apiBlob(`/incidents/${id}/evidence/${evidenceId}/content`),
-  uploadEvidence: (id, file) => {
+  uploadEvidence: async (id, file) => {
+    const optimized = await prepareEvidenceImage(file);
     const data = new FormData();
-    data.append("file", file);
+    data.append("file", optimized);
     return apiData("POST", `/incidents/${id}/evidence`, { data });
   },
   jobs: (id, params) => apiData("GET", `/incidents/${id}/ai-jobs`, { params }),
   action: (id, action, data) =>
     apiData("POST", `/incidents/${id}/${action}`, { data }),
-  assignmentAction: (id, action, data) =>
-    apiData("POST", `/assignments/${id}/${action}`, { data }),
 };

@@ -57,12 +57,26 @@ type Commands = Omit<
   EngagementRepository,
   "notifications" | "unreadCount" | "sessions" | "session" | "messages" | "job"
 >;
+const successMessages: Partial<Record<keyof Commands, string>> = {
+  readAll: "Notificaciones marcadas como leídas.",
+  createSession: "Conversación creada.",
+  close: "Conversación cerrada.",
+  setEmail: "Correo actualizado.",
+  requestVerification: "Solicitud de verificación enviada.",
+  forgotPassword: "Solicitud de recuperación recibida.",
+  resetPassword: "Contraseña restablecida.",
+  confirmEmail: "Correo verificado.",
+  changePassword: "Contraseña actualizada. Vuelve a iniciar sesión.",
+  logoutAll: "Todas las sesiones se cerraron.",
+};
+
 export function useEngagementAction<K extends keyof Commands>(key: K) {
   const cache = useQueryClient();
   const command = api[key] as (
     ...args: Parameters<Commands[K]>
   ) => Promise<Awaited<ReturnType<Commands[K]>>>;
   return useMutation({
+    meta: { successMessage: successMessages[key] },
     mutationFn: (args: Parameters<Commands[K]>) => command(...args),
     onSuccess: () => {
       if (key === "read" || key === "readAll")

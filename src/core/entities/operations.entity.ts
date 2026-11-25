@@ -1,11 +1,7 @@
 export const statuses = [
-  "RECEIVED",
-  "AI_ANALYSIS",
-  "IN_REVIEW",
+  "NEW",
   "ACCEPTED",
-  "ASSIGNED",
   "IN_PROGRESS",
-  "RESOLVED",
   "REJECTED",
   "CLOSED",
   "CANCELLED",
@@ -61,13 +57,13 @@ export interface IncidentQuery extends PageQuery {
   urgency?: string;
   trackingCode?: string;
   requiresSupervision?: boolean;
-  areaId?: string;
+  responsibleId?: string;
 }
 export interface Incident {
   id: string;
   trackingCode: string;
   version: number;
-  status: (typeof statuses)[number];
+  status: (typeof statuses)[number] | "RESOLVED";
   urgency: string | null;
   type: string | null;
   category: string | null;
@@ -79,7 +75,9 @@ export interface Incident {
 }
 export interface IncidentDetail extends Incident {
   originalMessage: string;
-  classificationSource: "AI" | "HUMAN" | null;
+  aiConfidence?: number | null;
+  reporter?: { firstName: string | null; lastName: string | null } | null;
+  classificationSource: "AI" | "HUMAN" | "MANUAL_WITHOUT_AI" | null;
   reviewedAt: string | null;
   addressReference: string | null;
   improvedDescription: string | null;
@@ -92,20 +90,15 @@ export interface IncidentDetail extends Incident {
     confidence: number | string | null;
   }[];
   resolutionSummary: string | null;
+  cancellationReason: string | null;
+  responsibleId: string | null;
+  responsible: { firstName: string | null; lastName: string | null } | null;
+  submittedAt: string | null;
+  acceptedAt: string | null;
+  startedAt: string | null;
+  closedAt: string | null;
   rejectionReason: string | null;
   rejectionComment: string | null;
-}
-export interface Assignment {
-  id: string;
-  incidentId: string;
-  areaId: string;
-  operatorId: string | null;
-  version: number;
-  status: string;
-  note: string | null;
-  area: { name: string; code: string };
-  operator?: { firstName: string; lastName: string | null } | null;
-  incident: { trackingCode: string };
 }
 export interface HistoryEntry {
   id: string;
@@ -137,17 +130,20 @@ export interface DashboardSummary {
   total: number;
   byStatus: { status: string; count: number }[];
   byUrgency: { urgency: string | null; count: number }[];
-  resolution: { since: string; count: number; averageMinutes: number | null };
-  managedAreaIds: string[];
+  since: string;
+  submitted: number;
+  cancelled: number;
+  cancellationReasons: { reason: string; count: number }[];
+  pending: { count: number; oldestSubmittedAt: string | null };
+  timings: Record<
+    "acceptance" | "start" | "handling" | "closure",
+    {
+      count: number;
+      averageMinutes: number | null;
+      medianMinutes: number | null;
+      p90Minutes: number | null;
+    }
+  >;
 }
 export type IncidentAction =
-  | "review"
-  | "accept"
-  | "reject"
-  | "assignments"
-  | "reassignments"
-  | "start"
-  | "resolve"
-  | "close"
-  | "cancel"
-  | "ai/retry";
+  "review" | "accept" | "transfer" | "start" | "close" | "cancel" | "ai/retry";

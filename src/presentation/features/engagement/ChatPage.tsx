@@ -1,3 +1,4 @@
+import { ConfirmActionButton } from "@/presentation/components/ConfirmActionButton";
 import { enumLabel, operationalMessage } from "@/shared/utils/enum-labels";
 import { useEffect, useState } from "react";
 import type { ChatInput } from "@/core/entities/engagement.entity";
@@ -54,16 +55,17 @@ function Conversation({ id }: { id: string }) {
                 Actualizar mensajes
               </button>
               {conversation.status === "ACTIVE" && (
-                <button
+                <ConfirmActionButton
                   className="btn btn-sm"
                   disabled={busy}
-                  onClick={() => {
-                    if (window.confirm("¿Cerrar esta conversación?"))
-                      close.mutate([id]);
+                  confirmation={{
+                    title: "¿Cerrar esta conversación?",
+                    description: "Ya no podrás enviar mensajes en esta conversación.",
+                    onAccept: () => close.mutate([id]),
                   }}
                 >
                   Cerrar conversación
-                </button>
+                </ConfirmActionButton>
               )}
             </div>
           </div>

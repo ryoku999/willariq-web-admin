@@ -1,264 +1,409 @@
-import { IncidentStatusBadge, IncidentUrgencyBadge } from "./IncidentBadges";
-import { enumLabel } from "@/shared/utils/enum-labels";
-import { roleBase } from "@/shared/utils/operations-path";
-import { lazy, Suspense, useState } from "react";
-import { Link } from "react-router-dom";
-import { statuses, urgencies } from "@/core/entities/operations.entity";
 import {
+  ArrowRight,
+  List,
+  Map as MapIcon,
+  MapPin,
+  Search,
+  Sparkles,
+  UserRound,
+} from "lucide-react";
+import { lazy, Suspense, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import type { Incident } from "@/core/entities/operations.entity";
+import { urgencies } from "@/core/entities/operations.entity";
+import {
+  useIncidentClassification,
   useIncidents,
-  useMyAssignments,
 } from "@/infrastructure/hooks/use-operations";
-import { useAreas } from "@/infrastructure/hooks/use-municipal-areas";
+import { useUserProfile } from "@/infrastructure/hooks/use-users";
 import { useAuthStore } from "@/infrastructure/storage/auth-storage";
 import {
   Field,
   Pager,
   PanelPage,
-  PanelTable,
   QueryView,
 } from "@/presentation/components/PanelControls";
-import { formatDate } from "@/shared/utils/panel-format";
 import LoadingState from "@/presentation/components/LoadingState";
+import { enumLabel } from "@/shared/utils/enum-labels";
+import { roleBase } from "@/shared/utils/operations-path";
+import { formatDate } from "@/shared/utils/panel-format";
+import { IncidentStatusBadge, IncidentUrgencyBadge } from "./IncidentBadges";
 
 const IncidentMap = lazy(() => import("./IncidentMap"));
 
-const emptyFilters = {
-  code: "",
-  status: "",
-  urgency: "",
-  area: "",
-  supervision: false,
-};
+const states = [
+  ["", "Todas"],
+  ["NEW", "Nuevas"],
+  ["ACCEPTED", "Aceptadas"],
+  ["IN_PROGRESS", "En atención"],
+  ["CLOSED", "Cerradas"],
+  ["CANCELLED", "Canceladas"],
+  ["RESOLVED", "Resueltas"],
+  ["REJECTED", "Rechazadas"],
+] as const;
 
-export default function IncidentsPage() {
+const emptyFilters = { code: "", urgency: "", supervision: false, mine: false };
+
+function InboxCard({ incident, base }: { incident: Incident; base: string }) {
+  const classified = !!(incident.type || incident.category || incident.urgency);
+  const origin = useIncidentClassification(
+    incident.id,
+    incident.version,
+    classified,
+  );
+  const isNew = incident.status === "NEW";
+  const source =
+    origin.data && origin.data.version === incident.version
+      ? origin.data.classificationSource
+      : null;
+  const isAi = source === "AI";
+  const isHuman = source === "HUMAN";
+  const findingOrigin = origin.isPending || origin.isFetching;
+
+  return (
+    <li
+      className={
+        "rounded-2xl border bg-base-100 " +
+        (isNew
+          ? "border-primary/40 border-l-4 border-l-primary"
+          : "border-base-300")
+      }
+    >
+      <article className="grid min-w-0 gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_auto] xl:items-center">
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <IncidentStatusBadge status={incident.status} />
+            {incident.requiresSupervision && (
+              <span className="badge badge-warning badge-soft badge-sm">
+                Requiere supervisión
+              </span>
+            )}
+          </div>
+          <h3>
+            <Link
+              className="link link-hover font-bold [overflow-wrap:anywhere]"
+              to={base + "/incidents/" + incident.id}
+            >
+              {incident.trackingCode}
+            </Link>
+          </h3>
+          <div className="flex items-start gap-2 text-sm text-base-content/75">
+            <MapPin className="mt-0.5 shrink-0" size={16} aria-hidden="true" />
+            <span className="min-w-0 [overflow-wrap:anywhere]">
+              {incident.address || "Sin dirección registrada"}
+            </span>
+          </div>
+        </div>
+
+        <div className="min-w-0 rounded-xl bg-base-200/65 px-3 py-2.5">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-sm font-medium">Gravedad</span>
+            <IncidentUrgencyBadge urgency={incident.urgency} />
+            {isAi && (
+              <span className="badge badge-secondary badge-soft badge-sm gap-1">
+                <Sparkles size={12} aria-hidden="true" /> Clasificada por IA
+              </span>
+            )}
+            {isHuman && (
+              <span className="badge badge-info badge-soft badge-sm gap-1">
+                <UserRound size={12} aria-hidden="true" /> Revisión humana
+              </span>
+            )}
+            {classified && findingOrigin && !isAi && !isHuman && (
+              <span className="text-xs text-base-content/70">
+                Consultando origen…
+              </span>
+            )}
+            {classified && !findingOrigin && !isAi && !isHuman && (
+              <span className="text-xs text-base-content/70">
+                Origen sin confirmar
+              </span>
+            )}
+          </div>
+          {incident.category && (
+            <p className="mt-1 text-sm text-base-content/75 [overflow-wrap:anywhere]">
+              {enumLabel(incident.category)}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-base-300 pt-3 xl:flex-col xl:items-end xl:border-0 xl:pt-0">
+          <time
+            className="text-xs text-base-content/70"
+            dateTime={incident.createdAt}
+          >
+            {formatDate(incident.createdAt)}
+          </time>
+          <Link
+            className="btn btn-sm btn-outline"
+            to={base + "/incidents/" + incident.id}
+            aria-label={"Ver detalle de " + incident.trackingCode}
+          >
+            Ver detalle <ArrowRight size={15} aria-hidden="true" />
+          </Link>
+        </div>
+      </article>
+    </li>
+  );
+}
+
+type InboxStatus = (typeof states)[number][0];
+
+function IncidentsInbox({
+  initialStatus,
+  initialUrgency,
+}: {
+  initialStatus: InboxStatus;
+  initialUrgency: string;
+}) {
+  const profile = useUserProfile();
   const base = roleBase(useAuthStore((s) => s.user?.role));
   const [page, setPage] = useState(1);
-  const [draft, setDraft] = useState(emptyFilters);
-  const [filters, setFilters] = useState(emptyFilters);
+  const [status, setStatus] = useState(initialStatus);
+  const [draft, setDraft] = useState({
+    ...emptyFilters,
+    urgency: initialUrgency,
+  });
+  const [filters, setFilters] = useState({
+    ...emptyFilters,
+    urgency: initialUrgency,
+  });
   const [map, setMap] = useState(false);
   const query = useIncidents({
     page,
     limit: 20,
-    status: filters.status || undefined,
+    status: status || undefined,
     urgency: filters.urgency || undefined,
     trackingCode: filters.code || undefined,
-    areaId: filters.area || undefined,
     requiresSupervision: filters.supervision || undefined,
+    responsibleId: filters.mine ? profile.data?.id : undefined,
   });
   const activeCount = Object.values(filters).filter(Boolean).length;
   const hasFilters = activeCount > 0 || Object.values(draft).some(Boolean);
-  const areas = useAreas(1, undefined, undefined, 100);
+
   return (
     <PanelPage
-      title="Incidencias"
-      description="Bandeja y ubicaciones dentro del alcance de tu cuenta."
+      title="Bandeja de incidencias"
+      description="Consulta los reportes y abre cada caso para darle seguimiento."
     >
-      <form
+      <section
         className="space-y-4 rounded-2xl border border-base-300 bg-base-100 p-4 sm:p-5"
-        aria-label="Filtros de incidencias"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setFilters({ ...draft, code: draft.code.trim() });
-          setPage(1);
-        }}
+        aria-labelledby="inbox-state"
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="font-semibold">Filtros de incidencias</h2>
-          {activeCount > 0 && (
-            <span className="badge badge-ghost">
-              {activeCount}{" "}
-              {activeCount === 1 ? "filtro aplicado" : "filtros aplicados"}
-            </span>
-          )}
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Field label="Código de seguimiento">
-            <input
-              className="input w-full"
-              value={draft.code}
-              maxLength={30}
-              placeholder="Buscar por código"
-              onChange={(event) =>
-                setDraft({ ...draft, code: event.target.value })
-              }
-            />
-          </Field>
-          <Field label="Área municipal">
-            <select
-              className="select w-full"
-              value={draft.area}
-              onChange={(event) =>
-                setDraft({ ...draft, area: event.target.value })
-              }
-            >
-              <option value="">Todas las áreas</option>
-              {areas.data?.items.map((area) => (
-                <option key={area.id} value={area.id}>
-                  {area.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Estado">
-            <select
-              className="select w-full"
-              value={draft.status}
-              onChange={(event) =>
-                setDraft({ ...draft, status: event.target.value })
-              }
-            >
-              <option value="">Todos los estados</option>
-              {statuses.map((status) => (
-                <option key={status} value={status}>
-                  {enumLabel(status)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Urgencia">
-            <select
-              className="select w-full"
-              value={draft.urgency}
-              onChange={(event) =>
-                setDraft({ ...draft, urgency: event.target.value })
-              }
-            >
-              <option value="">Todas las urgencias</option>
-              {urgencies.map((urgency) => (
-                <option key={urgency} value={urgency}>
-                  {enumLabel(urgency)}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 pt-3">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="checkbox checkbox-sm"
-              checked={draft.supervision}
-              onChange={(event) =>
-                setDraft({ ...draft, supervision: event.target.checked })
-              }
-            />
-            Solo incidencias que requieren supervisión
-          </label>
-          <div className="flex gap-2">
+        <h2 id="inbox-state" className="text-sm font-semibold">
+          Estado
+        </h2>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          {states.map(([value, label]) => (
             <button
-              className="btn btn-ghost"
+              key={value}
               type="button"
-              disabled={!hasFilters}
+              aria-pressed={status === value}
+              className={
+                status === value
+                  ? "btn btn-sm btn-primary"
+                  : "btn btn-sm btn-outline"
+              }
               onClick={() => {
-                setDraft(emptyFilters);
-                setFilters(emptyFilters);
+                setStatus(value);
                 setPage(1);
               }}
             >
-              Limpiar filtros
+              {value === "NEW" && (
+                <span
+                  className={
+                    "size-2 rounded-full " +
+                    (status === value ? "bg-primary-content" : "bg-primary")
+                  }
+                  aria-hidden="true"
+                />
+              )}
+              {label}
             </button>
-            <button className="btn btn-primary" type="submit">
-              Aplicar filtros
+          ))}
+        </div>
+        <form
+          className="space-y-4 border-t border-base-300 pt-4"
+          aria-label="Filtros de incidencias"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setFilters({ ...draft, code: draft.code.trim() });
+            setPage(1);
+          }}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-semibold">Buscar y filtrar</h2>
+            {activeCount > 0 && (
+              <span className="badge badge-ghost badge-sm">
+                {activeCount}{" "}
+                {activeCount === 1 ? "filtro aplicado" : "filtros aplicados"}
+              </span>
+            )}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <Field label="Código de seguimiento">
+              <input
+                className="input w-full"
+                value={draft.code}
+                maxLength={30}
+                placeholder="Buscar por código"
+                onChange={(event) =>
+                  setDraft({ ...draft, code: event.target.value })
+                }
+              />
+            </Field>
+            <Field label="Gravedad">
+              <select
+                className="select w-full"
+                aria-label="Gravedad"
+                value={draft.urgency}
+                onChange={(event) =>
+                  setDraft({ ...draft, urgency: event.target.value })
+                }
+              >
+                <option value="">Todas las gravedades</option>
+                {[...urgencies].reverse().map((urgency) => (
+                  <option key={urgency} value={urgency}>
+                    {enumLabel(urgency)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-x-5 gap-y-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-sm"
+                  checked={draft.mine}
+                  disabled={!profile.data}
+                  onChange={(event) =>
+                    setDraft({ ...draft, mine: event.target.checked })
+                  }
+                />
+                Solo a mi cargo
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-sm"
+                  checked={draft.supervision}
+                  onChange={(event) =>
+                    setDraft({ ...draft, supervision: event.target.checked })
+                  }
+                />
+                Requieren supervisión
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="btn btn-sm btn-ghost"
+                type="button"
+                disabled={!hasFilters}
+                onClick={() => {
+                  setDraft(emptyFilters);
+                  setFilters(emptyFilters);
+                  setPage(1);
+                }}
+              >
+                Limpiar filtros
+              </button>
+              <button className="btn btn-sm btn-primary" type="submit">
+                <Search size={16} aria-hidden="true" /> Aplicar filtros
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section aria-labelledby="inbox-results" className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 id="inbox-results" className="text-lg font-bold">
+              {states.find(([value]) => value === status)?.[1] ?? "Resultados"}
+            </h2>
+            {query.data && (
+              <p className="text-sm text-base-content/70">
+                {query.data.pagination.total}{" "}
+                {query.data.pagination.total === 1
+                  ? "incidencia"
+                  : "incidencias"}
+              </p>
+            )}
+          </div>
+          <div className="join" aria-label="Vista de resultados">
+            <button
+              className={"btn btn-sm join-item " + (!map ? "btn-primary" : "")}
+              type="button"
+              aria-pressed={!map}
+              onClick={() => setMap(false)}
+            >
+              <List size={16} aria-hidden="true" /> Lista
+            </button>
+            <button
+              className={"btn btn-sm join-item " + (map ? "btn-primary" : "")}
+              type="button"
+              aria-pressed={map}
+              onClick={() => setMap(true)}
+            >
+              <MapIcon size={16} aria-hidden="true" /> Mapa
             </button>
           </div>
         </div>
-      </form>
-      <div className="flex justify-end">
-        <button
-          className="btn"
-          type="button"
-          aria-pressed={map}
-          onClick={() => setMap((current) => !current)}
-        >
-          {map ? "Ocultar mapa" : "Ver mapa"}
-        </button>
-      </div>
-      <QueryView query={query}>
-        {(data) => (
-          <>
-            {map && (
+        <QueryView query={query}>
+          {(data) =>
+            data.items.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-base-300 bg-base-100 p-6 text-sm text-base-content/75">
+                {status === "NEW" && !activeCount
+                  ? "Por ahora no hay incidencias nuevas."
+                  : "No hay incidencias para esta selección."}
+              </p>
+            ) : (
               <>
-                <p className="text-sm">
-                  El mapa muestra los resultados de esta página.
-                </p>
-                <Suspense fallback={<LoadingState />}>
-                  <IncidentMap items={data.items} base={base} />
-                </Suspense>
+                {map ? (
+                  <div className="space-y-3 rounded-2xl border border-base-300 bg-base-100 p-4">
+                    <p className="text-sm text-base-content/70">
+                      Ubicaciones de los reportes de esta página.
+                    </p>
+                    <Suspense fallback={<LoadingState />}>
+                      <IncidentMap items={data.items} base={base} />
+                    </Suspense>
+                  </div>
+                ) : (
+                  <ul className="space-y-3">
+                    {data.items.map((incident) => (
+                      <InboxCard
+                        key={incident.id}
+                        incident={incident}
+                        base={base}
+                      />
+                    ))}
+                  </ul>
+                )}
               </>
-            )}
-            <PanelTable
-              headers={[
-                "Código",
-                "Estado",
-                "Urgencia",
-                "Dirección",
-                "Registro",
-              ]}
-            >
-              {data.items.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    <Link
-                      className="link link-primary"
-                      to={`${base}/incidents/${row.id}`}
-                    >
-                      {row.trackingCode}
-                    </Link>
-                  </td>
-                  <td>
-                    <IncidentStatusBadge status={row.status} />
-                    {row.requiresSupervision && (
-                      <span className="badge badge-warning ml-2">
-                        Supervisión
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    <IncidentUrgencyBadge urgency={row.urgency} />
-                  </td>
-                  <td>{row.address ?? "—"}</td>
-                  <td>{formatDate(row.createdAt)}</td>
-                </tr>
-              ))}
-            </PanelTable>
-            <Pager data={data} onPage={setPage} />
-          </>
+            )
+          }
+        </QueryView>
+        {query.data && query.data.pagination.pages > 1 && (
+          <Pager data={query.data} onPage={setPage} />
         )}
-      </QueryView>
+      </section>
     </PanelPage>
   );
 }
 
-export function MyAssignmentsPage() {
-  const base = roleBase(useAuthStore((s) => s.user?.role));
-  const [page, setPage] = useState(1);
-  const query = useMyAssignments({ page, limit: 20 });
+export default function IncidentsPage() {
+  const [params] = useSearchParams();
+  const status =
+    states.find(([value]) => value === params.get("status"))?.[0] ?? "";
+  const urgency =
+    urgencies.find((value) => value === params.get("urgency")) ?? "";
   return (
-    <PanelPage title="Mis asignaciones">
-      <QueryView query={query}>
-        {(data) => (
-          <>
-            <PanelTable headers={["Incidencia", "Área", "Estado", "Nota"]}>
-              {data.items.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    <Link
-                      className="link link-primary"
-                      to={`${base}/incidents/${row.incidentId}`}
-                    >
-                      {row.incident?.trackingCode ?? "Ver incidencia"}
-                    </Link>
-                  </td>
-                  <td>{row.area?.name ?? "Área no disponible"}</td>
-                  <td>{enumLabel(row.status, "assignment")}</td>
-                  <td>{row.note ?? "—"}</td>
-                </tr>
-              ))}
-            </PanelTable>
-            <Pager data={data} onPage={setPage} />
-          </>
-        )}
-      </QueryView>
-    </PanelPage>
+    <IncidentsInbox
+      key={status + ":" + urgency}
+      initialStatus={status}
+      initialUrgency={urgency}
+    />
   );
 }
